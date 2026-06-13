@@ -76,6 +76,9 @@ public class RegistryAssetRegistry<T extends ILostCityAsset, R> implements ILost
                     try {
                         Registry<R> registry = level.registryAccess().registryOrThrow(registryKey);
                         R value = registry.get(ResourceKey.create(registryKey, name));
+                        if (value == null) {
+                            throw new RuntimeException("Resource " + name + " not found in registry " + registryKey.location() + "! Available keys: " + registry.keySet());
+                        }
                         if (value instanceof IAsset asset) {
                             asset.setRegistryName(name);
                         }

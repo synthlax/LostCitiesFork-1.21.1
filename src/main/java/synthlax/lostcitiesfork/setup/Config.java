@@ -23,7 +23,7 @@ public class Config {
     public static ModConfigSpec.ConfigValue<String> SPECIAL_BED_BLOCK;// = "minecraft:diamond_block";
 
     private static final String[] DEFAULT_DIMENSION_PROFILES = new String[] {
-            "lostcities:lostcity=biosphere",
+            "lostcitiesfork:lostcity=biosphere",
             "lostworlds:abyss=biosphere_caves",
     };
     private static final ModConfigSpec.ConfigValue<List<? extends String>> DIMENSION_PROFILES;

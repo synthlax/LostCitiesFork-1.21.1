@@ -11,7 +11,7 @@ import synthlax.lostcitiesfork.varia.ChunkCoord;
 import synthlax.lostcitiesfork.varia.ComponentFactory;
 import synthlax.lostcitiesfork.worldgen.IDimensionInfo;
 import synthlax.lostcitiesfork.worldgen.lost.BuildingInfo;
-import mcjty.lostcities.worldgen.lost.cityassets.*;
+import synthlax.lostcitiesfork.worldgen.lost.cityassets.*;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.ResourceLocationArgument;

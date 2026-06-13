@@ -9,7 +9,7 @@ import synthlax.lostcitiesfork.varia.CustomTeleporter;
 import synthlax.lostcitiesfork.varia.WorldTools;
 import synthlax.lostcitiesfork.worldgen.GlobalTodo;
 import synthlax.lostcitiesfork.worldgen.IDimensionInfo;
-import mcjty.lostcities.worldgen.lost.*;
+import synthlax.lostcitiesfork.worldgen.lost.*;
 import synthlax.lostcitiesfork.worldgen.lost.*;
 import synthlax.lostcitiesfork.worldgen.lost.cityassets.AssetRegistries;
 import synthlax.lostcitiesfork.worldgen.lost.cityassets.BuildingPart;

@@ -1,7 +1,7 @@
 {
   "pools": [
     {
-      "name": "lostcities:raildungeonchest",
+      "name": "lostcitiesfork:raildungeonchest",
       "rolls": {
         "min": 2,
         "max": 4

@@ -1,6 +1,6 @@
 package synthlax.lostcitiesfork;
 
-import mcjty.lostcities.api.*;
+import synthlax.lostcitiesfork.api.*;
 import synthlax.lostcitiesfork.api.*;
 import synthlax.lostcitiesfork.gui.GuiLCConfig;
 import synthlax.lostcitiesfork.setup.Config;

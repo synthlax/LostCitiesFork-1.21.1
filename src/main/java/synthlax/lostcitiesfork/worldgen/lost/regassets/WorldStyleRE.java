@@ -2,7 +2,7 @@ package synthlax.lostcitiesfork.worldgen.lost.regassets;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import mcjty.lostcities.worldgen.lost.regassets.data.*;
+import synthlax.lostcitiesfork.worldgen.lost.regassets.data.*;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 import synthlax.lostcitiesfork.worldgen.lost.regassets.data.*;

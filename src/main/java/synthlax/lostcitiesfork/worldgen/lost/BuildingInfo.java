@@ -1,16 +1,16 @@
 package synthlax.lostcitiesfork.worldgen.lost;
 
 import synthlax.lostcitiesfork.LostCities;
-import mcjty.lostcities.api.*;
+import synthlax.lostcitiesfork.api.*;
 import synthlax.lostcitiesfork.api.*;
 import synthlax.lostcitiesfork.config.LostCityProfile;
 import synthlax.lostcitiesfork.setup.Config;
-import mcjty.lostcities.varia.*;
+import synthlax.lostcitiesfork.varia.*;
 import synthlax.lostcitiesfork.varia.*;
 import synthlax.lostcitiesfork.worldgen.ChunkHeightmap;
 import synthlax.lostcitiesfork.worldgen.IDimensionInfo;
 import synthlax.lostcitiesfork.worldgen.LostCityTerrainFeature;
-import mcjty.lostcities.worldgen.lost.cityassets.*;
+import synthlax.lostcitiesfork.worldgen.lost.cityassets.*;
 import synthlax.lostcitiesfork.worldgen.lost.cityassets.*;
 import synthlax.lostcitiesfork.worldgen.lost.regassets.data.CitySphereSettings;
 import synthlax.lostcitiesfork.worldgen.lost.regassets.data.PredefinedBuilding;

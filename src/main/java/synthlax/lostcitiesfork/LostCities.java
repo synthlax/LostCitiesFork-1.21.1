@@ -5,7 +5,7 @@ import synthlax.lostcitiesfork.api.ILostCitiesPre;
 import synthlax.lostcitiesfork.datagen.DataGenerators;
 import synthlax.lostcitiesfork.network.PacketRequestProfile;
 import synthlax.lostcitiesfork.network.PacketReturnProfileToClient;
-import mcjty.lostcities.setup.*;
+import synthlax.lostcitiesfork.setup.*;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -27,7 +27,7 @@ import java.util.function.Supplier;
 
 @Mod(LostCities.MODID)
 public class LostCities {
-    public static final String MODID = "lostcities";
+    public static final String MODID = "lostcitiesfork";
 
     public static final Logger LOGGER = LogManager.getLogger(LostCities.MODID);
 
@@ -42,11 +42,11 @@ public class LostCities {
         CustomRegistries.init(bus);
 
         Path configPath = FMLPaths.CONFIGDIR.get();
-        File dir = new File(configPath + File.separator + "lostcities");
+        File dir = new File(configPath + File.separator + "lostcitiesfork");
         dir.mkdirs();
 
-        container.registerConfig(ModConfig.Type.CLIENT, Config.CLIENT_CONFIG, "lostcities/client.toml");
-        container.registerConfig(ModConfig.Type.COMMON, Config.COMMON_CONFIG, "lostcities/common.toml");
+        container.registerConfig(ModConfig.Type.CLIENT, Config.CLIENT_CONFIG, "lostcitiesfork/client.toml");
+        container.registerConfig(ModConfig.Type.COMMON, Config.COMMON_CONFIG, "lostcitiesfork/common.toml");
         container.registerConfig(ModConfig.Type.SERVER, Config.SERVER_CONFIG);
 
         setup.preInit();

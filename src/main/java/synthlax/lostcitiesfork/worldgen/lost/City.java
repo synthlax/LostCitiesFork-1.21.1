@@ -7,7 +7,7 @@ import synthlax.lostcitiesfork.varia.TimedCache;
 import synthlax.lostcitiesfork.varia.Tools;
 import synthlax.lostcitiesfork.worldgen.ChunkHeightmap;
 import synthlax.lostcitiesfork.worldgen.IDimensionInfo;
-import mcjty.lostcities.worldgen.lost.cityassets.*;
+import synthlax.lostcitiesfork.worldgen.lost.cityassets.*;
 import synthlax.lostcitiesfork.worldgen.lost.cityassets.*;
 import synthlax.lostcitiesfork.worldgen.lost.regassets.data.PredefinedBuilding;
 import synthlax.lostcitiesfork.worldgen.lost.regassets.data.PredefinedStreet;
@@ -47,7 +47,8 @@ public class City {
     }
 
     public static CityRarityMap getCityRarityMap(ResourceKey<Level> level, long seed, double scale, double offset, double innerScale) {
-        return CITY_RARITY_MAP.computeIfAbsent(level, k -> new CityRarityMap(seed, scale, offset, innerScale));
+        ResourceKey<Level> key = level != null ? level : Level.OVERWORLD;
+        return CITY_RARITY_MAP.computeIfAbsent(key, k -> new CityRarityMap(seed, scale, offset, innerScale));
     }
 
     public static synchronized PredefinedCity getPredefinedCity(CommonLevelAccessor level, ChunkCoord coord) {

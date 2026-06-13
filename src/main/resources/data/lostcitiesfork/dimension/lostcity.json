@@ -1,5 +1,5 @@
 {
-  "type": "lostcities:lostcity",
+  "type": "lostcitiesfork:lostcity",
   "generator": {
     "type": "minecraft:noise",
     "seed": 0,

@@ -444,9 +444,9 @@ public class ProfileSetup {
 
     public static void setupProfiles() {
         Path path = FMLPaths.CONFIGDIR.get();
-        Path profileDir = Paths.get(path.toString(), "lostcities/profiles");
+        Path profileDir = Paths.get(path.toString(), "lostcitiesfork/profiles");
 
-        LostCities.getLogger().info("Creating standard profiles into 'config/lostcities/profiles'");
+        LostCities.getLogger().info("Creating standard profiles into 'config/lostcitiesfork/profiles'");
 
         initStandardProfiles();
         LostCityProfileSetupImp setupImp = new LostCityProfileSetupImp();
@@ -472,7 +472,7 @@ public class ProfileSetup {
             }
         }
 
-        LostCities.getLogger().info("Reading existing profiles from 'config/lostcities/profiles'");
+        LostCities.getLogger().info("Reading existing profiles from 'config/lostcitiesfork/profiles'");
         readProfiles(profileDir);
     }
 

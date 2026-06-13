@@ -1,7 +1,7 @@
 package synthlax.lostcitiesfork.worldgen.lost.cityassets;
 
 import synthlax.lostcitiesfork.setup.CustomRegistries;
-import mcjty.lostcities.worldgen.lost.regassets.*;
+import synthlax.lostcitiesfork.worldgen.lost.regassets.*;
 import synthlax.lostcitiesfork.worldgen.lost.regassets.*;
 import net.minecraft.world.level.CommonLevelAccessor;
 

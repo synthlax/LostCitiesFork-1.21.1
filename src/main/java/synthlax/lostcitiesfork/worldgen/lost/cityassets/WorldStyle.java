@@ -6,7 +6,7 @@ import synthlax.lostcitiesfork.varia.Tools;
 import synthlax.lostcitiesfork.worldgen.IDimensionInfo;
 import synthlax.lostcitiesfork.worldgen.lost.BiomeInfo;
 import synthlax.lostcitiesfork.worldgen.lost.regassets.WorldStyleRE;
-import mcjty.lostcities.worldgen.lost.regassets.data.*;
+import synthlax.lostcitiesfork.worldgen.lost.regassets.data.*;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.biome.Biome;

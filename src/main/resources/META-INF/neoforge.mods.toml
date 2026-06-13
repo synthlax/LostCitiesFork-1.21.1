@@ -1,24 +1,23 @@
 modLoader="javafml"
 license="MIT License https://github.com/McJtyMods/LostCities/blob/1.21_neo/LICENSE"
 loaderVersion="[2,)"
-issueTrackerURL="http://github.com/McJtyMods/LostCities/issues"
-displayURL="http://github.com/McJtyMods/LostCities/"
+displayURL="https://github.com/synthlax/LostCitiesFork-1.21.1"
 #logoFile="examplemod.png" #optional
-#credits="Thanks for this example mod goes to Java" #optional
+credits="Thanks for this original mod goes to McJty" #optional
 authors="McJty"
 
 [[accessTransformers]]
 file="META-INF/accesstransformer.cfg"
 
 [[mods]]
-modId="lostcities"
+modId="lostcitiesfork"
 version="${file.jarVersion}"
-displayName="LostCities"
+displayName="LostCitiesFork"
 #updateJSONURL="http://myurl.me/" #optional
 description='''
 Generate cities all over the world
 '''
-[[dependencies.lostcities]]
+[[dependencies.lostcitiesfork]]
     modId="neoforge"
     type="required"
     versionRange="[21.0,)"
