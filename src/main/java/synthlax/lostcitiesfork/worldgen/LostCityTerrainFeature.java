@@ -1894,12 +1894,15 @@ public class LostCityTerrainFeature {
         tag.putInt("y", pos.getY());
         tag.putInt("z", pos.getZ());
         tag.putString("id", BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(type).toString());
+        final BlockState expectedState = b;
         info.addPostTodo(pos, () -> {
             WorldGenLevel inWorld = info.provider.getWorld();
-            inWorld.getChunk(pos).setBlockEntityNbt(tag);
-            if (b.getBlock() == Blocks.COMMAND_BLOCK) {
-                ((ServerChunkCache)inWorld.getChunkSource()).blockChanged(pos);
-                inWorld.scheduleTick(pos, b.getBlock(), 1);
+            if (inWorld.getBlockState(pos).getBlock() == expectedState.getBlock()) {
+                inWorld.getChunk(pos).setBlockEntityNbt(tag);
+                if (expectedState.getBlock() == Blocks.COMMAND_BLOCK) {
+                    ((ServerChunkCache)inWorld.getChunkSource()).blockChanged(pos);
+                    inWorld.scheduleTick(pos, expectedState.getBlock(), 1);
+                }
             }
         });
         return b;
@@ -1921,9 +1924,12 @@ public class LostCityTerrainFeature {
             SpawnData data = new SpawnData(sd, Optional.empty(), Optional.empty());
             tag.put("SpawnData", SpawnData.CODEC.encodeStart(NbtOps.INSTANCE, data).result().orElseThrow(() -> new IllegalStateException("Invalid SpawnData")));
 
+            final BlockState expectedState = b;
             info.addPostTodo(pos, () -> {
                 WorldGenLevel inWorld = info.provider.getWorld();
-                inWorld.getChunk(pos).setBlockEntityNbt(tag);
+                if (inWorld.getBlockState(pos).getBlock() == expectedState.getBlock()) {
+                    inWorld.getChunk(pos).setBlockEntityNbt(tag);
+                }
             });
         } else {
             b = air;
@@ -2027,6 +2033,12 @@ public class LostCityTerrainFeature {
 
     private void generateLoot(BuildingInfo info, LevelAccessor world, BlockPos pos, BuildingInfo.ConditionTodo condition) {
         BlockEntity te = world.getBlockEntity(pos);
+        if (te == null && world.getBlockState(pos).getBlock() instanceof EntityBlock entityBlock) {
+            te = entityBlock.newBlockEntity(pos, world.getBlockState(pos));
+            if (te != null) {
+                world.getChunk(pos).setBlockEntity(te);
+            }
+        }
         if (te instanceof RandomizableContainerBlockEntity) {
             if (this.provider.getProfile().GENERATE_LOOT) {
                 createLoot(info, getRand(), world, pos, condition, this.provider);
@@ -2041,6 +2053,12 @@ public class LostCityTerrainFeature {
             return;
         }
         BlockEntity tileentity = world.getBlockEntity(pos);
+        if (tileentity == null && world.getBlockState(pos).getBlock() instanceof EntityBlock entityBlock) {
+            tileentity = entityBlock.newBlockEntity(pos, world.getBlockState(pos));
+            if (tileentity != null) {
+                world.getChunk(pos).setBlockEntity(tileentity);
+            }
+        }
         if (tileentity instanceof RandomizableContainerBlockEntity rcbe) {
             if (todo != null) {
                 String lootTable = todo.getCondition();

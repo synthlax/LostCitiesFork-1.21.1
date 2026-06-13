@@ -899,7 +899,23 @@ public class BuildingInfo implements ILostChunkInfo {
             };
             String randomPart = building.getRandomPart(rand, conditionContext);
             if (randomPart == null) {
-                throw new RuntimeException("Misconfiguration! Floor were generated for a building where no part condition matches!");
+                StringBuilder msg = new StringBuilder();
+                msg.append("Misconfiguration! Floor were generated for building '").append(building.getName()).append("' where no part condition matches!\n");
+                msg.append("Context Info:\n");
+                msg.append("  - Floor index: ").append(i).append(" (out of ").append(floors + cellars).append(" total, floors=").append(floors).append(", cellars=").append(cellars).append(")\n");
+                msg.append("  - Current floor relative to ground: ").append(i - cellars).append("\n");
+                msg.append("  - isTopOfBuilding(): ").append(conditionContext.isTopOfBuilding()).append("\n");
+                msg.append("  - isGroundFloor(): ").append(conditionContext.isGroundFloor()).append("\n");
+                msg.append("  - isCellar(): ").append(conditionContext.isCellar()).append("\n");
+                msg.append("  - isSphere(): ").append(conditionContext.isSphere()).append("\n");
+                msg.append("  - getBiome(): ").append(conditionContext.getBiome()).append("\n");
+                msg.append("  - getBelowPart(): ").append(conditionContext.getBelowPart()).append("\n");
+                msg.append("  - getPart(): ").append(conditionContext.getPart()).append("\n");
+                msg.append("Configured Parts & Matching Results:\n");
+                for (org.apache.commons.lang3.tuple.Pair<java.util.function.Predicate<synthlax.lostcitiesfork.worldgen.lost.cityassets.ConditionContext>, String> pair : building.getParts()) {
+                    msg.append("  - Part '").append(pair.getRight()).append("': test result = ").append(pair.getLeft().test(conditionContext)).append("\n");
+                }
+                throw new RuntimeException(msg.toString());
             }
             belowPart = randomPart;
             floorTypes[i] = AssetRegistries.PARTS.getOrThrow(provider.getWorld(), randomPart);

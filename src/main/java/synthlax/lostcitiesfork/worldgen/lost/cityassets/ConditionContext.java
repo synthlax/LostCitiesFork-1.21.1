@@ -82,7 +82,7 @@ public abstract class ConditionContext {
         }
         if (element.getBelowPart() != null) {
             Set<String> belowPart = element.getBelowPart();
-            test = combine(test, context -> belowPart.contains(context.getPart()));
+            test = combine(test, context -> belowPart.contains(context.getBelowPart()));
         }
         if (element.getInpart() != null) {
             Set<String> part = element.getInpart();
@@ -255,6 +255,10 @@ public abstract class ConditionContext {
 
     public String getPart() {
         return part;
+    }
+
+    public String getBelowPart() {
+        return belowPart;
     }
 
     public String getBuilding() {

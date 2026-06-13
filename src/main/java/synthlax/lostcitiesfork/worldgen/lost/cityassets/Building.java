@@ -118,6 +118,10 @@ public class Building implements ILostCityBuilding {
     	return allowDoors;
     }
 
+    public List<Pair<Predicate<ConditionContext>, String>> getParts() {
+        return parts;
+    }
+
     @Override
     public Boolean getAllowFillers() {
     	return allowFillers;
