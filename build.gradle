@@ -3,6 +3,9 @@ buildscript {
         maven { url = 'https://maven.firstdark.dev/releases' }
         mavenCentral()
         gradlePluginPortal()
+        flatDir {
+            dirs 'libs'
+        }
     }
     dependencies {
         classpath 'com.hypherionmc.modutils:modpublisher:2.2.1'
@@ -25,8 +28,8 @@ if (project.file('../gradletools.gradle').exists()) {
     apply from: 'https://raw.githubusercontent.com/McJtyMods/MultiWorkspace/1.21_neo/gradletools.gradle'
 }
 
-group = "com.github.mcjty"
-archivesBaseName = "lostcities"
+group = "com.github.synthlax"
+archivesBaseName = "lostcitiesfork"
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 if (System.getenv('BUILD_NUMBER') != null) {
@@ -44,11 +47,11 @@ sourceSets.main.resources {
 
 dependencies {
     mc()
-//    jei()
+    jei()
     top()
+    implementation files('libs/c2me-neoforge-mc1.21.1-0.3.0+alpha.0.93.jar')
+    implementation files('libs/DistantHorizons-3.0.3-b-1.21.1-fabric-neoforge.jar')
 }
-
-modpublisher(['the-one-probe'], [], ['the-one-probe'], [], [])
 
 
 subsystems {
@@ -62,7 +65,7 @@ subsystems {
 task apiJar(type: Jar) {
     archiveClassifier = "api"
     from(sourceSets.main.output) {
-        include "mcjty/lostcities/api/**"
+        include "synthlax/lostcitiesfork/api/**"
     }
 }
 
@@ -77,16 +80,12 @@ publishing {
 
         artifactId = project.archivesBaseName
         pom {
-            name = 'LostCities'
-            description = 'Lost Cities'
+            name = 'LostCitiesFork'
+            description = 'Lost Cities Fork'
             scm {
-                url = 'https://github.com/McJtyMods/LostCities'
-                connection = 'scm:git:git@github.com:McJtyMods/LostCities.git'
-                developerConnection = 'scm:git:git@github.com:McJtyMods/LostCities.git'
-            }
-            issueManagement {
-                system = 'github'
-                url = 'https://github.com/McJtyMods/LostCities/issues'
+                url = 'https://github.com/synthlax/LostCitiesFork-1.21.1'
+                connection = 'scm:git:git@github.com:synthlax/LostCitiesFork-1.21.1.git'
+                developerConnection = 'scm:git:git@github.com:synthlax/LostCitiesFork-1.21.1.git'
             }
             licenses {
                 license {
@@ -98,6 +97,11 @@ publishing {
                 developer {
                     id = 'McJty'
                     name = 'McJty'
+                    roles = ['developer']
+                }
+                developer {
+                    id = 'Synthlax'
+                    name = 'Synthlax'
                     roles = ['developer']
                 }
             }
