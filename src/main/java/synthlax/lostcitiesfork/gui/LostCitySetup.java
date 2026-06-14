@@ -138,8 +138,11 @@ public class LostCitySetup {
     public void toggleWorldStyle() {
         PackRepository repository = Minecraft.getInstance().getResourcePackRepository();
         CloseableResourceManager resourceManager = new MultiPackResourceManager(PackType.SERVER_DATA, repository.openAllSelected());
-        Map<ResourceLocation, Resource> map = resourceManager.listResources("lostcities/worldstyles", s -> s.toString().endsWith(".json"));
+        Map<ResourceLocation, Resource> map = resourceManager.listResources(LostCities.MODID + "/worldstyles", s -> s.toString().endsWith(".json"));
         List<String> styles = map.keySet().stream().map(LostCitySetup::worldStyleToName).collect(Collectors.toList());
+        if (styles.isEmpty()) {
+            return;
+        }
         String current = get().map(LostCityProfile::getWorldStyle).orElse("<none>");
         int idx = styles.indexOf(current);
         if (idx == -1) {
@@ -172,6 +175,10 @@ public class LostCitySetup {
                 }
                 return o1.compareTo(o2);
             });
+        }
+
+        if (profiles.isEmpty()) {
+            return;
         }
 
         if (profile == null) {
