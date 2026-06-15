@@ -94,13 +94,18 @@ public class ForgeEventHandlers {
 
     @SubscribeEvent
     public void onServerStarting(ServerAboutToStartEvent event) {
-        cleanUp();
+        Registration.LOSTCITY_FEATURE.get().cleanUp();
     }
 
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
-        cleanUp();
+        Registration.LOSTCITY_FEATURE.get().cleanUp();
         Config.reset();
+    }
+
+    @SubscribeEvent
+    public void onLevelUnload(LevelEvent.Unload event) {
+        Registration.LOSTCITY_FEATURE.get().cleanUp();
     }
 
     public static void cleanUp() {
@@ -112,6 +117,7 @@ public class ForgeEventHandlers {
         BiomeInfo.cleanCache();
         City.cleanCache();
         CitySphere.cleanCache();
+        GlobalTodo.cleanUp();
     }
 
     @SubscribeEvent

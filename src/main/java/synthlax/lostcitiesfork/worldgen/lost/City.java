@@ -32,7 +32,7 @@ public class City {
 
     // If cityChance == -1 then this is used to control where cities are
     private static final Map<ResourceKey<Level>, CityRarityMap> CITY_RARITY_MAP = new java.util.concurrent.ConcurrentHashMap<>();
-    private static final TimedCache<ChunkCoord, CityStyle> CITY_STYLE_CACHE = new TimedCache<>(Config.CACHE_CLEANUP_SECONDS::get);
+    private static final TimedCache<ChunkCoord, CityStyle> CITY_STYLE_CACHE = new TimedCache<>("CITY_STYLE_CACHE", Config.CACHE_CLEANUP_SECONDS::get);
     private static volatile Map<ChunkCoord, PreDefBuildingOffset> OCCUPIED_CHUNKS_BUILDING = null;
     private static volatile Map<ChunkCoord, PredefinedStreet> OCCUPIED_CHUNKS_STREET = null;
 
@@ -51,12 +51,17 @@ public class City {
         return CITY_RARITY_MAP.computeIfAbsent(key, k -> new CityRarityMap(seed, scale, offset, innerScale));
     }
 
-    public static synchronized PredefinedCity getPredefinedCity(CommonLevelAccessor level, ChunkCoord coord) {
-        AssetRegistries.loadPredefinedStuff(level);
+    public static PredefinedCity getPredefinedCity(CommonLevelAccessor level, ChunkCoord coord) {
         if (predefinedCityMap == null) {
-            predefinedCityMap = new HashMap<>();
-            for (PredefinedCity city : AssetRegistries.PREDEFINED_CITIES.getIterable()) {
-                predefinedCityMap.put(new ChunkCoord(city.getDimension(), city.getChunkX(), city.getChunkZ()), city);
+            synchronized (City.class) {
+                if (predefinedCityMap == null) {
+                    AssetRegistries.loadPredefinedStuff(level);
+                    Map<ChunkCoord, PredefinedCity> map = new HashMap<>();
+                    for (PredefinedCity city : AssetRegistries.PREDEFINED_CITIES.getIterable()) {
+                        map.put(new ChunkCoord(city.getDimension(), city.getChunkX(), city.getChunkZ()), city);
+                    }
+                    predefinedCityMap = map;
+                }
             }
         }
         if (predefinedCityMap.isEmpty()) {
@@ -65,30 +70,46 @@ public class City {
         return predefinedCityMap.get(coord);
     }
 
-    public static synchronized PredefinedBuilding getPredefinedBuildingAtTopLeft(CommonLevelAccessor level, ChunkCoord coord) {
-        calculateMap(level);
+    public static PredefinedBuilding getPredefinedBuildingAtTopLeft(CommonLevelAccessor level, ChunkCoord coord) {
+        if (predefinedBuildingMap == null) {
+            synchronized (City.class) {
+                calculateMap(level);
+            }
+        }
         return predefinedBuildingMap.get(coord);
     }
 
-    public static synchronized PreDefBuildingOffset getPredefinedBuilding(IDimensionInfo provider, ChunkCoord coord) {
-        calculateOccupied(provider);
+    public static PreDefBuildingOffset getPredefinedBuilding(IDimensionInfo provider, ChunkCoord coord) {
+        if (OCCUPIED_CHUNKS_BUILDING == null) {
+            synchronized (City.class) {
+                calculateOccupied(provider);
+            }
+        }
         return OCCUPIED_CHUNKS_BUILDING.get(coord);
     }
 
-    public static synchronized PredefinedStreet getPredefinedStreet(IDimensionInfo provider, ChunkCoord coord) {
-        calculateOccupied(provider);
+    public static PredefinedStreet getPredefinedStreet(IDimensionInfo provider, ChunkCoord coord) {
+        if (OCCUPIED_CHUNKS_STREET == null) {
+            synchronized (City.class) {
+                calculateOccupied(provider);
+            }
+        }
         return OCCUPIED_CHUNKS_STREET.get(coord);
     }
 
     // Return true if a chunk is occupied (by a predefined building or street)
-    public static synchronized boolean isChunkOccupied(IDimensionInfo provider, ChunkCoord coord) {
-        calculateOccupied(provider);
+    public static boolean isChunkOccupied(IDimensionInfo provider, ChunkCoord coord) {
+        if (OCCUPIED_CHUNKS_BUILDING == null || OCCUPIED_CHUNKS_STREET == null) {
+            synchronized (City.class) {
+                calculateOccupied(provider);
+            }
+        }
         return OCCUPIED_CHUNKS_BUILDING.containsKey(coord) || OCCUPIED_CHUNKS_STREET.containsKey(coord);
     }
 
     private static synchronized void calculateOccupied(IDimensionInfo provider) {
         if (OCCUPIED_CHUNKS_BUILDING == null) {
-            OCCUPIED_CHUNKS_BUILDING = new HashMap<>();
+            Map<ChunkCoord, PreDefBuildingOffset> occupiedBuilding = new HashMap<>();
             calculateMap(provider.getWorld());
             for (Map.Entry<ChunkCoord, PredefinedBuilding> entry : predefinedBuildingMap.entrySet()) {
                 PredefinedBuilding pb = entry.getValue();
@@ -98,47 +119,55 @@ public class City {
                     // Add all occupied chunkcoords for the building to the occupied set
                     for (int x = 0 ; x < building.getDimX() ; x++) {
                         for (int z = 0 ; z < building.getDimZ() ; z++) {
-                            OCCUPIED_CHUNKS_BUILDING.put(root.offset(x, z), new PreDefBuildingOffset(pb, x, z));
+                            occupiedBuilding.put(root.offset(x, z), new PreDefBuildingOffset(pb, x, z));
                         }
                     }
                 } else {
-                    OCCUPIED_CHUNKS_BUILDING.put(root, new PreDefBuildingOffset(pb, 0, 0));
+                    occupiedBuilding.put(root, new PreDefBuildingOffset(pb, 0, 0));
                 }
             }
+            OCCUPIED_CHUNKS_BUILDING = occupiedBuilding;
         }
         AssetRegistries.loadPredefinedStuff(provider.getWorld());
         if (OCCUPIED_CHUNKS_STREET == null) {
-            OCCUPIED_CHUNKS_STREET = new HashMap<>();
+            Map<ChunkCoord, PredefinedStreet> occupiedStreet = new HashMap<>();
             for (PredefinedCity city : AssetRegistries.PREDEFINED_CITIES.getIterable()) {
                 for (PredefinedStreet street : city.getPredefinedStreets()) {
-                    OCCUPIED_CHUNKS_STREET.put(new ChunkCoord(city.getDimension(),
+                    occupiedStreet.put(new ChunkCoord(city.getDimension(),
                             city.getChunkX() + street.relChunkX(), city.getChunkZ() + street.relChunkZ()), street);
                 }
             }
+            OCCUPIED_CHUNKS_STREET = occupiedStreet;
         }
     }
 
     private static synchronized void calculateMap(CommonLevelAccessor level) {
         AssetRegistries.loadPredefinedStuff(level);
         if (predefinedBuildingMap == null) {
-            predefinedBuildingMap = new HashMap<>();
+            Map<ChunkCoord, PredefinedBuilding> map = new HashMap<>();
             for (PredefinedCity city : AssetRegistries.PREDEFINED_CITIES.getIterable()) {
                 for (PredefinedBuilding building : city.getPredefinedBuildings()) {
-                    predefinedBuildingMap.put(new ChunkCoord(city.getDimension(),
+                    map.put(new ChunkCoord(city.getDimension(),
                             city.getChunkX() + building.relChunkX(), city.getChunkZ() + building.relChunkZ()), building);
                 }
             }
+            predefinedBuildingMap = map;
         }
     }
 
-    public static synchronized PredefinedStreet getPredefinedStreet(CommonLevelAccessor level, ChunkCoord coord) {
-        AssetRegistries.loadPredefinedStuff(level);
+    public static PredefinedStreet getPredefinedStreet(CommonLevelAccessor level, ChunkCoord coord) {
         if (predefinedStreetMap == null) {
-            predefinedStreetMap = new HashMap<>();
-            for (PredefinedCity city : AssetRegistries.PREDEFINED_CITIES.getIterable()) {
-                for (PredefinedStreet street : city.getPredefinedStreets()) {
-                    predefinedStreetMap.put(new ChunkCoord(city.getDimension(),
-                            city.getChunkX() + street.relChunkX(), city.getChunkZ() + street.relChunkZ()), street);
+            synchronized (City.class) {
+                if (predefinedStreetMap == null) {
+                    AssetRegistries.loadPredefinedStuff(level);
+                    Map<ChunkCoord, PredefinedStreet> map = new HashMap<>();
+                    for (PredefinedCity city : AssetRegistries.PREDEFINED_CITIES.getIterable()) {
+                        for (PredefinedStreet street : city.getPredefinedStreets()) {
+                            map.put(new ChunkCoord(city.getDimension(),
+                                    city.getChunkX() + street.relChunkX(), city.getChunkZ() + street.relChunkZ()), street);
+                        }
+                    }
+                    predefinedStreetMap = map;
                 }
             }
         }

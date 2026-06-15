@@ -14,8 +14,8 @@ public class Highway {
 
     private static volatile PerlinNoiseGenerator14 perlinX = null;
     private static volatile PerlinNoiseGenerator14 perlinZ = null;
-    private static final TimedCache<ChunkCoord, Integer> X_HIGHWAY_LEVEL_CACHE = new TimedCache<>(Config.CACHE_CLEANUP_SECONDS::get);
-    private static final TimedCache<ChunkCoord, Integer> Z_HIGHWAY_LEVEL_CACHE = new TimedCache<>(Config.CACHE_CLEANUP_SECONDS::get);
+    private static final TimedCache<ChunkCoord, Integer> X_HIGHWAY_LEVEL_CACHE = new TimedCache<>("X_HIGHWAY_LEVEL_CACHE", Config.CACHE_CLEANUP_SECONDS::get);
+    private static final TimedCache<ChunkCoord, Integer> Z_HIGHWAY_LEVEL_CACHE = new TimedCache<>("Z_HIGHWAY_LEVEL_CACHE", Config.CACHE_CLEANUP_SECONDS::get);
 
 
     private static synchronized void makePerlin(long seed) {

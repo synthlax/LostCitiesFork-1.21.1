@@ -1,114 +1,72 @@
 {
   "meta": [
     {
-      "integer": 4,
+      "integer": 0,
       "key": "z1"
     },
     {
-      "integer": 11,
+      "integer": 7,
       "key": "z2"
     }
   ],
-  "xsize": 6,
-  "zsize": 12,
+  "xsize": 12,
+  "zsize": 6,
   "slices": [
     [
-      "      ",
-      "      ",
-      "      ",
-      "      ",
-      "xxxxxx",
-      "xxxxx/",
-      "xxxxx/",
-      "xxxxx/",
-      "xxxxx/",
-      "xxxxx/",
-      "xxxxx/",
-      "xxxxxx"
+      "xxxxxxxx    ",
+      "xxxxxxxx    ",
+      "xxxxxxxx    ",
+      "xxxxxxxx    ",
+      "xxxxxxxx    ",
+      "x//////x    "
     ],
     [
-      "      ",
-      "      ",
-      "      ",
-      "      ",
-      "xxxxx_",
-      "xxxx/ ",
-      "xxxx/ ",
-      "xxxx/ ",
-      "xxxx/ ",
-      "xxxx/ ",
-      "xxxx/ ",
-      "xxxxx_"
+      "xxxxxxxx    ",
+      "xxxxxxxx    ",
+      "xxxxxxxx    ",
+      "xxxxxxxx    ",
+      "x//////x    ",
+      "_      _    "
     ],
     [
-      "      ",
-      "      ",
-      "      ",
-      "      ",
-      "xxxx_ ",
-      "xxx/  ",
-      "xxx/  ",
-      "xxx/  ",
-      "xxx/  ",
-      "xxx/  ",
-      "xxx/  ",
-      "xxxx_ "
+      "xxxxxxxx    ",
+      "xxxxxxxx    ",
+      "xxxxxxxx    ",
+      "x//////x    ",
+      "_      _    ",
+      "            "
     ],
     [
-      "      ",
-      "      ",
-      "      ",
-      "      ",
-      "xxx_  ",
-      "xx/   ",
-      "xx/   ",
-      "xx/   ",
-      "xx/   ",
-      "xx/   ",
-      "xx/   ",
-      "xxx_  "
+      "xxxxxxxx    ",
+      "xxxxxxxx    ",
+      "x//////x    ",
+      "_      _    ",
+      "            ",
+      "            "
     ],
     [
-      "      ",
-      "      ",
-      "      ",
-      "      ",
-      "xx_   ",
-      "x/    ",
-      "x/    ",
-      "x/    ",
-      "x/    ",
-      "x/    ",
-      "x/    ",
-      "xx_   "
+      "xxxxxxxx    ",
+      "x//////x    ",
+      "_      _    ",
+      "            ",
+      "            ",
+      "            "
     ],
     [
-      "      ",
-      "      ",
-      "      ",
-      "      ",
-      "x_    ",
-      "/     ",
-      "/     ",
-      "/     ",
-      "/     ",
-      "/     ",
-      "/     ",
-      "x_    "
+      "x//////x    ",
+      "_      _    ",
+      "            ",
+      "            ",
+      "            ",
+      "            "
     ],
     [
-      "      ",
-      "      ",
-      "      ",
-      "      ",
-      "_     ",
-      "      ",
-      "      ",
-      "      ",
-      "      ",
-      "      ",
-      "      ",
-      "_     "
+      "_      _    ",
+      "            ",
+      "            ",
+      "            ",
+      "            ",
+      "            "
     ]
   ]
 }

@@ -82,10 +82,10 @@ public class BuildingInfo implements ILostChunkInfo {
     public final Block doorBlock;
 
     // Transient info that is calculated on demand
-    private BuildingInfo xmin = null;   // @todo remove
-    private BuildingInfo xmax = null;   // @todo remove
-    private BuildingInfo zmin = null;   // @todo remove
-    private BuildingInfo zmax = null;   // @todo remove
+    private transient java.lang.ref.WeakReference<BuildingInfo> xminRef = null;
+    private transient java.lang.ref.WeakReference<BuildingInfo> xmaxRef = null;
+    private transient java.lang.ref.WeakReference<BuildingInfo> zminRef = null;
+    private transient java.lang.ref.WeakReference<BuildingInfo> zmaxRef = null;
     private DamageArea damageArea = null;
     private Palette palette = null;
     private CompiledPalette compiledPalette = null;
@@ -140,9 +140,9 @@ public class BuildingInfo implements ILostChunkInfo {
     }
 
     // BuildingInfo cache
-    private static final TimedCache<ChunkCoord, BuildingInfo> BUILDING_INFO_MAP = new TimedCache<>(Config.CACHE_CLEANUP_SECONDS::get);
-    private static final TimedCache<ChunkCoord, LostChunkCharacteristics> CITY_INFO_MAP = new TimedCache<>(Config.CACHE_CLEANUP_SECONDS::get);
-    private static final TimedCache<ChunkCoord, Integer> CITY_LEVEL_CACHE = new TimedCache<>(Config.CACHE_CLEANUP_SECONDS::get);
+    private static final TimedCache<ChunkCoord, BuildingInfo> BUILDING_INFO_MAP = new TimedCache<>("BUILDING_INFO_MAP", Config.CACHE_CLEANUP_SECONDS::get);
+    private static final TimedCache<ChunkCoord, LostChunkCharacteristics> CITY_INFO_MAP = new TimedCache<>("CITY_INFO_MAP", Config.CACHE_CLEANUP_SECONDS::get);
+    private static final TimedCache<ChunkCoord, Integer> CITY_LEVEL_CACHE = new TimedCache<>("CITY_LEVEL_CACHE", Config.CACHE_CLEANUP_SECONDS::get);
 
     public void addTorchTodo(BlockPos index) {
         torchTodo.add(index);
@@ -212,31 +212,39 @@ public class BuildingInfo implements ILostChunkInfo {
     }
 
     public BuildingInfo getXmin() {
-        if (xmin == null) {
-            xmin = getBuildingInfo(coord.west(), provider);
+        BuildingInfo x = (xminRef != null) ? xminRef.get() : null;
+        if (x == null) {
+            x = getBuildingInfo(coord.west(), provider);
+            xminRef = new java.lang.ref.WeakReference<>(x);
         }
-        return xmin;
+        return x;
     }
 
     public BuildingInfo getXmax() {
-        if (xmax == null) {
-            xmax = getBuildingInfo(coord.east(), provider);
+        BuildingInfo x = (xmaxRef != null) ? xmaxRef.get() : null;
+        if (x == null) {
+            x = getBuildingInfo(coord.east(), provider);
+            xmaxRef = new java.lang.ref.WeakReference<>(x);
         }
-        return xmax;
+        return x;
     }
 
     public BuildingInfo getZmin() {
-        if (zmin == null) {
-            zmin = getBuildingInfo(coord.north(), provider);
+        BuildingInfo z = (zminRef != null) ? zminRef.get() : null;
+        if (z == null) {
+            z = getBuildingInfo(coord.north(), provider);
+            zminRef = new java.lang.ref.WeakReference<>(z);
         }
-        return zmin;
+        return z;
     }
 
     public BuildingInfo getZmax() {
-        if (zmax == null) {
-            zmax = getBuildingInfo(coord.south(), provider);
+        BuildingInfo z = (zmaxRef != null) ? zmaxRef.get() : null;
+        if (z == null) {
+            z = getBuildingInfo(coord.south(), provider);
+            zmaxRef = new java.lang.ref.WeakReference<>(z);
         }
-        return zmax;
+        return z;
     }
 
     public int getMaxHeight() {
@@ -295,6 +303,24 @@ public class BuildingInfo implements ILostChunkInfo {
         return characteristics.couldHaveBuilding;
     }
 
+    private static NoiseGeneratorPerlin buildingNoise = null;
+
+    private static synchronized NoiseGeneratorPerlin getBuildingNoise(IDimensionInfo provider) {
+        if (buildingNoise == null) {
+            buildingNoise = new NoiseGeneratorPerlin(new net.minecraft.world.level.levelgen.LegacyRandomSource(provider.getSeed() + 457813957L), 4);
+        }
+        return buildingNoise;
+    }
+
+    private static NoiseGeneratorPerlin parkNoise = null;
+
+    private static synchronized NoiseGeneratorPerlin getParkNoise(IDimensionInfo provider) {
+        if (parkNoise == null) {
+            parkNoise = new NoiseGeneratorPerlin(new net.minecraft.world.level.levelgen.LegacyRandomSource(provider.getSeed() + 893125741L), 4);
+        }
+        return parkNoise;
+    }
+
     public static synchronized LostChunkCharacteristics getChunkCharacteristicsGui(ChunkCoord key, IDimensionInfo provider) {
 //        LostChunkCharacteristics cached = CITY_INFO_MAP.get(key);
 //        if (cached != null) {
@@ -308,7 +334,19 @@ public class BuildingInfo implements ILostChunkInfo {
         characteristics.isCity = isCityRaw(key, provider, profile);
         characteristics.cityLevel = getCityLevelGui(key, provider);
         Random rand = getBuildingRandom(chunkX, chunkZ, provider.getSeed());
-        characteristics.couldHaveBuilding = characteristics.isCity && rand.nextFloat() < profile.BUILDING_CHANCE;
+        
+        float buildingChance = profile.BUILDING_CHANCE;
+        CityStyle style = City.getCityStyle(key, provider, profile);
+        if (style != null && style.getBuildingChance() != null) {
+            buildingChance = style.getBuildingChance();
+        }
+        
+        NoiseGeneratorPerlin noise = getBuildingNoise(provider);
+        double noiseVal = noise.getValue(chunkX * 0.08, chunkZ * 0.08);
+        double normNoise = Math.max(0.0, Math.min(1.0, (noiseVal + 1.0) / 2.0));
+        double localChance = buildingChance * (0.3 + 1.4 * normNoise);
+
+        characteristics.couldHaveBuilding = characteristics.isCity && rand.nextFloat() < localChance;
 //        CITY_INFO_MAP.put(key, characteristics);
         return characteristics;
     }
@@ -462,10 +500,18 @@ public class BuildingInfo implements ILostChunkInfo {
             buildingChance = style.getBuildingChance();
         }
 
+        double localChance = buildingChance;
+        if (!section.isMulti()) {
+            NoiseGeneratorPerlin noise = getBuildingNoise(provider);
+            double noiseVal = noise.getValue(coord.chunkX() * 0.08, coord.chunkZ() * 0.08);
+            double normNoise = Math.max(0.0, Math.min(1.0, (noiseVal + 1.0) / 2.0));
+            localChance = buildingChance * (0.3 + 1.4 * normNoise);
+        }
+
         if (section.isMulti()) {
             // Part of multi-building. We have checked everything above
             b = true;
-        } else if (bc >= buildingChance) {
+        } else if (bc >= localChance) {
             // Random says we should have no building here
             b = false;
         } else if (hasHighway(coord, provider, profile)) {
@@ -655,7 +701,7 @@ public class BuildingInfo implements ILostChunkInfo {
 
                 @Override
                 public ResourceLocation getBiome() {
-                    Holder<Biome> biome = provider.getWorld().getBiome(getCenter(0));
+                    Holder<Biome> biome = provider.getBiome(getCenter(0));
                     return biome.unwrap().map(ResourceKey::location, b -> provider.getWorld().registryAccess().registry(Registries.BIOME).orElseThrow().getKey(b));
                 }
             };
@@ -676,7 +722,7 @@ public class BuildingInfo implements ILostChunkInfo {
 
                 @Override
                 public ResourceLocation getBiome() {
-                    Holder<Biome> biome = provider.getWorld().getBiome(getCenter(0));
+                    Holder<Biome> biome = provider.getBiome(getCenter(0));
                     return biome.unwrap().map(ResourceKey::location, b -> provider.getWorld().registryAccess().registry(Registries.BIOME).orElseThrow().getKey(b));
                 }
             };
@@ -777,7 +823,17 @@ public class BuildingInfo implements ILostChunkInfo {
             highwayZLevel = Highway.getZHighwayLevel(key, provider, profile);
 
             float parkChance = cs.getParkChance() != null ? cs.getParkChance() : profile.PARK_CHANCE;
-            if (rand.nextDouble() < parkChance) {
+            NoiseGeneratorPerlin pNoise = getParkNoise(provider);
+            double pNoiseVal = pNoise.getValue(key.chunkX() * 0.05, key.chunkZ() * 0.05);
+            double pNormNoise = Math.max(0.0, Math.min(1.0, (pNoiseVal + 1.0) / 2.0));
+            double localParkChance = parkChance;
+            if (pNormNoise > 0.65) {
+                localParkChance = Math.min(0.95, parkChance * 4.0); // Boost heavily for clustered central parks
+            } else {
+                localParkChance = parkChance * 0.15; // Suppress scattered single park chunks
+            }
+
+            if (rand.nextDouble() < localParkChance) {
                 streetType = StreetType.PARK;
             } else {
                 streetType = StreetType.values()[rand.nextInt(0, BuildingInfo.StreetType.values().length - 2)];
@@ -893,7 +949,7 @@ public class BuildingInfo implements ILostChunkInfo {
 
                 @Override
                 public ResourceLocation getBiome() {
-                    Holder<Biome> biome = provider.getWorld().getBiome(getCenter(0));
+                    Holder<Biome> biome = provider.getBiome(getCenter(0));
                     return biome.unwrap().map(ResourceKey::location, b -> provider.getWorld().registryAccess().registry(Registries.BIOME).orElseThrow().getKey(b));
                 }
             };
@@ -933,7 +989,7 @@ public class BuildingInfo implements ILostChunkInfo {
 
                 @Override
                 public ResourceLocation getBiome() {
-                    Holder<Biome> biome = provider.getWorld().getBiome(getCenter(0));
+                    Holder<Biome> biome = provider.getBiome(getCenter(0));
                     return biome.unwrap().map(ResourceKey::location, b -> provider.getWorld().registryAccess().registry(Registries.BIOME).orElseThrow().getKey(b));
                 }
             };
@@ -1546,8 +1602,18 @@ public class BuildingInfo implements ILostChunkInfo {
         if (!i2.doesRoadExtendTo()) {
             return false;
         }
-        if (Math.abs(i1.cityLevel - i2.cityLevel) <= 0 /* @todo temporary, should be <= 1 */) {
-            // We allow a road difference of 1 maximum
+        if (i1.coord.chunkX() != i2.coord.chunkX()) {
+            if (i1.hasZBridge(i1.provider) != null || i2.hasZBridge(i2.provider) != null) {
+                return false;
+            }
+        }
+        if (i1.coord.chunkZ() != i2.coord.chunkZ()) {
+            if (i1.hasXBridge(i1.provider) != null || i2.hasXBridge(i2.provider) != null) {
+                return false;
+            }
+        }
+        if (Math.abs(i1.cityLevel - i2.cityLevel) <= 1) {
+            // We allow a road difference of 1 maximum (e.g. connected via ramp/stair/slope)
             return true;
         }
         return false;
@@ -1619,7 +1685,15 @@ public class BuildingInfo implements ILostChunkInfo {
         if (level < floorTypes.length && floorTypes[level].getMetaBoolean(ILostCities.META_DONTCONNECT)) {
             return false;       // No connection supported
         }
-        if (getXmin().hasFrontPartFrom(this)) {
+        
+        BuildingInfo xmin = getXmin();
+        if (hasBuilding && xmin.hasBuilding) {
+            if (multiBuilding != xmin.multiBuilding || (multiBuilding == null && buildingType != xmin.buildingType)) {
+                return false; // Prevent connecting separate, independent buildings!
+            }
+        }
+        
+        if (xmin.hasFrontPartFrom(this)) {
             return true;
         }
         return connectionAtX[level];
@@ -1656,7 +1730,15 @@ public class BuildingInfo implements ILostChunkInfo {
         if (level < floorTypes.length && floorTypes[level].getMetaBoolean(ILostCities.META_DONTCONNECT)) {
             return false;       // No connection supported
         }
-        if (getZmin().hasFrontPartFrom(this)) {
+        
+        BuildingInfo zmin = getZmin();
+        if (hasBuilding && zmin.hasBuilding) {
+            if (multiBuilding != zmin.multiBuilding || (multiBuilding == null && buildingType != zmin.buildingType)) {
+                return false; // Prevent connecting separate, independent buildings!
+            }
+        }
+        
+        if (zmin.hasFrontPartFrom(this)) {
             return true;
         }
         return connectionAtZ[level];

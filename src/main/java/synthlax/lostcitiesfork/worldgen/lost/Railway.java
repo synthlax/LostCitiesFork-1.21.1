@@ -88,7 +88,7 @@ public class Railway {
         }
     }
 
-    private static final TimedCache<ChunkCoord, RailChunkInfo> RAIL_INFO = new TimedCache<>(Config.CACHE_CLEANUP_SECONDS::get);
+    private static final TimedCache<ChunkCoord, RailChunkInfo> RAIL_INFO = new TimedCache<>("RAIL_INFO", Config.CACHE_CLEANUP_SECONDS::get);
 
     public static void cleanCache() {
         RAIL_INFO.clear();

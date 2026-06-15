@@ -106,7 +106,7 @@ public class LostCityTerrainFeature {
     public final LostCityProfile profile;
     public final RandomSource rand;
 
-    private final TimedCache<ChunkCoord, ChunkHeightmap> cachedHeightmaps = new TimedCache<>(Config.CACHE_CLEANUP_SECONDS::get);
+    private final TimedCache<ChunkCoord, ChunkHeightmap> cachedHeightmaps = new TimedCache<ChunkCoord, ChunkHeightmap>("cachedHeightmaps", Config.CACHE_CLEANUP_SECONDS::get);
     private final Object[] locks = new Object[1024];
     private final Statistics statistics = new Statistics();
     private final Map<Block, BlockEntityType> typeCache = new java.util.concurrent.ConcurrentHashMap<>();
@@ -397,60 +397,48 @@ public class LostCityTerrainFeature {
     }
 
     private static AvoidChunk hasBlacklistedStructure(WorldGenLevel level, int chunkX, int chunkZ) {
-        boolean doAdjacent = Config.AVOID_VILLAGES_ADJACENT.get() || Config.AVOID_STRUCTURES_ADJACENT.get();
-        if (doAdjacent || Config.AVOID_VILLAGES.get() || Config.hasAvoidedStructures()) {
-            if (doAdjacent) {
-                boolean couldBeUnknown = false;
-                for (int dx = -1; dx <= 1; dx++) {
-                    for (int dz = -1; dz <= 1; dz++) {
-                        if (level.hasChunk(chunkX + dx, chunkZ + dz)) {
-                            ChunkAccess ch = level.getChunk(chunkX + dx, chunkZ + dx, ChunkStatus.STRUCTURE_REFERENCES);
-                            if (testBlacklistedStructure(level, ch, chunkX == 0 && chunkZ == 0)) {
-                                return (dx == 0 && dz == 0) ? AvoidChunk.YES : AvoidChunk.ADJACENT;
+        int villageRadius = Config.AVOID_VILLAGES.get() ? Config.VILLAGE_AVOIDANCE_RADIUS.get() : 0;
+        if (Config.AVOID_VILLAGES_ADJACENT.get() && villageRadius < 2) {
+            villageRadius = 2; // Check adjacent
+        }
+        int structRadius = Config.hasAvoidedStructures() ? (Config.AVOID_STRUCTURES_ADJACENT.get() ? 2 : 1) : 0;
+        int maxRadius = Math.max(villageRadius, structRadius);
+
+        if (maxRadius > 0) {
+            boolean couldBeUnknown = false;
+            for (int dx = -maxRadius + 1; dx < maxRadius; dx++) {
+                for (int dz = -maxRadius + 1; dz < maxRadius; dz++) {
+                    int dist = Math.max(Math.abs(dx), Math.abs(dz));
+                    if (level.hasChunk(chunkX + dx, chunkZ + dz)) {
+                        ChunkAccess ch = level.getChunk(chunkX + dx, chunkZ + dz, ChunkStatus.STRUCTURE_REFERENCES);
+                        if (ch.hasAnyStructureReferences()) {
+                            var structures = level.registryAccess().registryOrThrow(Registries.STRUCTURE);
+                            var references = ch.getAllReferences();
+                            for (var entry : references.entrySet()) {
+                                if (!entry.getValue().isEmpty()) {
+                                    Optional<ResourceKey<Structure>> key = structures.getResourceKey(entry.getKey());
+                                    if (key.isPresent()) {
+                                        boolean isVillage = key.map(k -> structures.getHolderOrThrow(k).is(StructureTags.VILLAGE)).orElse(false);
+                                        if (isVillage && dist < villageRadius) {
+                                            return (dx == 0 && dz == 0) ? AvoidChunk.YES : AvoidChunk.ADJACENT;
+                                        }
+                                        if (!isVillage && Config.isAvoidedStructure(key.get().location()) && dist < structRadius) {
+                                            return (dx == 0 && dz == 0) ? AvoidChunk.YES : AvoidChunk.ADJACENT;
+                                        }
+                                    }
+                                }
                             }
-                        } else {
-                            couldBeUnknown = true;
                         }
-                    }
-                    if (couldBeUnknown) {
-                        return AvoidChunk.NO;  // If we have unknown chunks we assume it is ok
+                    } else {
+                        couldBeUnknown = true;
                     }
                 }
-            } else {
-                if (level.hasChunk(chunkX, chunkZ)) {
-                    ChunkAccess ch = level.getChunk(chunkX, chunkZ, ChunkStatus.STRUCTURE_REFERENCES);
-                    return testBlacklistedStructure(level, ch, true) ? AvoidChunk.YES : AvoidChunk.NO;
-                } else {
-                    return AvoidChunk.NO; // If we have unknown chunks we assume it is ok
-                }
+            }
+            if (couldBeUnknown) {
+                return AvoidChunk.NO; // Assume ok if any checked chunk is not loaded/generated yet
             }
         }
         return AvoidChunk.NO;
-    }
-
-    private static boolean testBlacklistedStructure(WorldGenLevel level, ChunkAccess ch, boolean center) {
-        if (ch.hasAnyStructureReferences()) {
-            var structures = level.registryAccess().registryOrThrow(Registries.STRUCTURE);
-            var references = ch.getAllReferences();
-            for (var entry : references.entrySet()) {
-                if (!entry.getValue().isEmpty()) {
-                    Optional<ResourceKey<Structure>> key = structures.getResourceKey(entry.getKey());
-                    if (Config.AVOID_VILLAGES.get()) {
-                        if (center || Config.AVOID_VILLAGES_ADJACENT.get()) {
-                            if (key.map(k -> structures.getHolderOrThrow(k).is(StructureTags.VILLAGE)).orElse(false)) {
-                                return true;
-                            }
-                        }
-                    }
-                    if (center || Config.AVOID_STRUCTURES_ADJACENT.get()) {
-                        if (Config.isAvoidedStructure(key.get().location())) {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-        return false;
     }
 
 
@@ -980,11 +968,17 @@ public class LostCityTerrainFeature {
         // Note: Better results may be achieved with terrain noise adjustment (like how newer structures do it)
         if (profile.isDefault() || profile.isVoidSpheres()) {
             int ground = info.getCityGroundLevel();
+            double factor = Config.NATURAL_FLATTENING_FACTOR.get();
             for (int x = 0; x < 16; x++) {
                 for (int z = 0; z < 16; z++) {
-                    int maxTouchedY = moveDown(x, z, ground + 1, provider.getWorld().getMaxBuildHeight());
+                    int targetY = ground;
+                    if (factor > 0.0) {
+                        int naturalHeight = heightmap.getHeight();
+                        targetY = (int) Math.round(ground * (1.0 - factor) + naturalHeight * factor);
+                    }
+                    int maxTouchedY = moveDown(x, z, targetY + 1, provider.getWorld().getMaxBuildHeight());
                     if (maxTouchedY == Short.MIN_VALUE) {
-                        moveUp(x, z, ground, info.waterLevel > info.groundLevel);
+                        moveUp(x, z, targetY, info.waterLevel > info.groundLevel);
                     }
                 }
             }
@@ -1037,10 +1031,10 @@ public class LostCityTerrainFeature {
                 Transform transform;
                 int oy = info.getCityGroundLevel() + 1;
                 transform = switch (stairDirection) {
-                    case XMIN -> Transform.ROTATE_NONE;
-                    case XMAX -> Transform.ROTATE_180;
-                    case ZMIN -> Transform.ROTATE_90;
-                    case ZMAX -> Transform.ROTATE_270;
+                    case ZMIN -> Transform.ROTATE_NONE;
+                    case ZMAX -> Transform.ROTATE_180;
+                    case XMIN -> Transform.ROTATE_270;
+                    case XMAX -> Transform.ROTATE_90;
                 };
 
                 generatePart(info, stairs, transform, 0, oy, 0, HardAirSetting.AIR);
@@ -1742,13 +1736,16 @@ public class LostCityTerrainFeature {
                     if (stairType != null) {
                         Integer z1 = stairType.getMetaInteger(ILostCities.META_Z_1);
                         Integer z2 = stairType.getMetaInteger(ILostCities.META_Z_2);
-                        Transform transform = direction.getOpposite().getRotation();
-                        int xx1 = transform.rotateX(15, z1);
-                        int zz1 = transform.rotateZ(15, z1);
-                        int xx2 = transform.rotateX(15, z2);
-                        int zz2 = transform.rotateZ(15, z2);
-                        if (x >= Math.min(xx1, xx2) && x <= Math.max(xx1, xx2) && z >= Math.min(zz1, zz2) && z <= Math.max(zz1, zz2)) {
-                            return true;
+                        if (z1 != null && z2 != null) {
+                            boolean connect = switch (direction) {
+                                case XMIN -> z >= z1 && z <= z2;
+                                case XMAX -> z >= 15 - z2 && z <= 15 - z1;
+                                case ZMIN -> x >= 15 - z2 && x <= 15 - z1;
+                                case ZMAX -> x >= z1 && x <= z2;
+                            };
+                            if (connect) {
+                                return true;
+                            }
                         }
                     }
                 }
@@ -1965,14 +1962,7 @@ public class LostCityTerrainFeature {
                 if (block instanceof SaplingBlock saplingBlock) {
                     BlockState finalB = b;
                     if (Config.FORCE_SAPLING_GROWTH.get()) {
-                        RandomSource forkedRand = getRand().fork();
-                        GlobalTodo.get(world.getLevel()).addTodo(pos, (level) -> {
-                            if (level.isAreaLoaded(pos, 1) && level.getBlockState(pos).getBlock() instanceof SaplingBlock) {
-                                level.setBlock(pos, finalB, Block.UPDATE_CLIENTS);
-                                // We do getRand().fork() to avoid accessing LegacyRandomSource from multiple threads
-                                saplingBlock.advanceTree(level, pos, finalB, forkedRand);
-                            }
-                        });
+                        GlobalTodo.get(world.getLevel()).addTodo(new SaplingTodoTask(pos, finalB));
                     } else {
                         info.addPostTodo(pos, () -> {
                             WorldGenLevel inWorld = info.provider.getWorld();

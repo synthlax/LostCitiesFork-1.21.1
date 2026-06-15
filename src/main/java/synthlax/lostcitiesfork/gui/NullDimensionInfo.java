@@ -234,6 +234,72 @@ public class NullDimensionInfo implements IDimensionInfo {
             case 'd' -> Biomes.DESERT;
             default -> Biomes.PLAINS;
         };
+        if (biomeRegistry == null) {
+            return new Holder<Biome>() {
+                @Override
+                public Biome value() {
+                    return null;
+                }
+
+                @Override
+                public boolean isBound() {
+                    return true;
+                }
+
+                @Override
+                public boolean is(Holder<Biome> other) {
+                    return other == this || other.unwrapKey().map(key -> key.equals(biome)).orElse(false);
+                }
+
+                @Override
+                public boolean is(net.minecraft.resources.ResourceLocation id) {
+                    return id.equals(biome.location());
+                }
+
+                @Override
+                public boolean is(ResourceKey<Biome> key) {
+                    return key.equals(biome);
+                }
+
+                @Override
+                public boolean is(java.util.function.Predicate<ResourceKey<Biome>> predicate) {
+                    return predicate.test(biome);
+                }
+
+                @Override
+                public boolean is(net.minecraft.tags.TagKey<Biome> tag) {
+                    if (tag.equals(net.minecraft.tags.BiomeTags.IS_OCEAN) || tag.equals(net.minecraft.tags.BiomeTags.IS_DEEP_OCEAN)) {
+                        return biome.equals(Biomes.OCEAN);
+                    }
+                    return false;
+                }
+
+                @Override
+                public java.util.stream.Stream<net.minecraft.tags.TagKey<Biome>> tags() {
+                    return java.util.stream.Stream.empty();
+                }
+
+                @Override
+                public com.mojang.datafixers.util.Either<ResourceKey<Biome>, Biome> unwrap() {
+                    return com.mojang.datafixers.util.Either.left(biome);
+                }
+
+                @Override
+                public java.util.Optional<ResourceKey<Biome>> unwrapKey() {
+                    return java.util.Optional.of(biome);
+                }
+
+                @Override
+                public Kind kind() {
+                    return Kind.REFERENCE;
+                }
+
+                @Override
+                public boolean canSerializeIn(net.minecraft.core.HolderOwner<Biome> owner) {
+                    return true;
+                }
+            };
+        }
         return biomeRegistry.getHolderOrThrow(biome);
     }
 

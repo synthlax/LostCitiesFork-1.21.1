@@ -14,13 +14,13 @@ public enum Direction {
         return (this == XMIN || this == XMAX) ? Orientation.X : Orientation.Z;
     }
 
-    // Rotation with xmin being 0
+    // Rotation with zmin being 0
     public Transform getRotation() {
         return switch (this) {
-            case XMIN -> Transform.ROTATE_NONE;
-            case XMAX -> Transform.ROTATE_180;
-            case ZMIN -> Transform.ROTATE_90;
-            case ZMAX -> Transform.ROTATE_270;
+            case ZMIN -> Transform.ROTATE_NONE;
+            case ZMAX -> Transform.ROTATE_180;
+            case XMIN -> Transform.ROTATE_270;
+            case XMAX -> Transform.ROTATE_90;
         };
     }
 

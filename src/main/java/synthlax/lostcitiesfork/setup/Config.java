@@ -53,6 +53,8 @@ public class Config {
     public static final ModConfigSpec.BooleanValue AVOID_VILLAGES;
     public static final ModConfigSpec.BooleanValue AVOID_VILLAGES_ADJACENT;
     public static final ModConfigSpec.BooleanValue AVOID_FLATTENING;
+    public static final ModConfigSpec.IntValue VILLAGE_AVOIDANCE_RADIUS;
+    public static final ModConfigSpec.DoubleValue NATURAL_FLATTENING_FACTOR;
     public static final ModConfigSpec.BooleanValue OPTIMIZED_HEIGHTMAP;
     public static final ModConfigSpec.IntValue HEIGHT_SAMPLE_SIZE;
 
@@ -187,7 +189,7 @@ public class Config {
         TODO_QUEUE_SIZE = SERVER_BUILDER.comment("The size of the todo queues for the lost city generator").defineInRange("todoQueueSize", 20, 1, 100000);
         FORCE_SAPLING_GROWTH = SERVER_BUILDER.comment("If this is true then saplings will grow into trees during generation. This is more expensive").define("forceSaplingGrowth", true);
         CACHE_CLEANUP_SECONDS = SERVER_BUILDER.comment("Time in seconds after which cached chunk data is evicted").defineInRange("cacheCleanupSeconds", 300, 1, 86400);
-        MAX_CACHE_SIZE = SERVER_BUILDER.comment("The maximum number of entries to keep in each world-generation coordinate cache (to prevent short-term memory spikes)").defineInRange("maxCacheSize", 8192, 1, 1000000);
+        MAX_CACHE_SIZE = SERVER_BUILDER.comment("The maximum number of entries to keep in each world-generation coordinate cache (to prevent short-term memory spikes)").defineInRange("maxCacheSize", 2048, 1, 1000000);
         AVOID_STRUCTURES = SERVER_BUILDER
                 .comment("List of structures to avoid when generating cities (for example to avoid generating a city in a woodland mansion)")
                 .defineList("avoidStructures", Lists.newArrayList(DEF_AVOID_STRUCTURES), s -> s instanceof String);
@@ -203,6 +205,12 @@ public class Config {
         AVOID_FLATTENING = SERVER_BUILDER
                 .comment("If true then avoid flattening the terrain around the city in case there was a structure that was avoided")
                 .define("avoidFlattening", true);
+        VILLAGE_AVOIDANCE_RADIUS = SERVER_BUILDER
+                .comment("The radius (in chunks) around villages where cities should not generate (0 to disable, 1 to check the chunk itself, 2 to check adjacent chunks, etc.)")
+                .defineInRange("villageAvoidanceRadius", 1, 0, 16);
+        NATURAL_FLATTENING_FACTOR = SERVER_BUILDER
+                .comment("A factor (0.0 to 1.0) to control how naturally the terrain is smoothed/flattened under city chunks instead of being perfectly flat. 0.0 is completely flat, 1.0 is following the natural terrain slopes perfectly.")
+                .defineInRange("naturalFlatteningFactor", 0.0, 0.0, 1.0);
 
         SERVER_BUILDER.pop();
         COMMON_BUILDER.pop();

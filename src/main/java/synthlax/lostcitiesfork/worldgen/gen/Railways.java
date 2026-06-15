@@ -241,11 +241,15 @@ public class Railways {
 
         if (needsStaircase) {
             part = AssetRegistries.PARTS.getOrThrow(provider.getWorld(), feature.getRandomPart(railwayParts.stationStaircase()));
-            for (int i = railInfo.getLevel() + 1; i < info.cityLevel; i++) {
+            int targetLevel = info.isCity ? info.cityLevel : (heightmap.getHeight() - info.groundLevel) / LostCityTerrainFeature.FLOORHEIGHT;
+            if (targetLevel <= railInfo.getLevel()) {
+                targetLevel = railInfo.getLevel() + 1;
+            }
+            for (int i = railInfo.getLevel() + 1; i < targetLevel; i++) {
                 height = info.groundLevel + i * LostCityTerrainFeature.FLOORHEIGHT;
                 feature.generatePart(info, part, transform, 0, height, 0, LostCityTerrainFeature.HardAirSetting.AIR);
             }
-            height = info.groundLevel + info.cityLevel * LostCityTerrainFeature.FLOORHEIGHT;
+            height = info.groundLevel + targetLevel * LostCityTerrainFeature.FLOORHEIGHT;
             part = AssetRegistries.PARTS.getOrThrow(provider.getWorld(), feature.getRandomPart(railwayParts.stationStaircaseSurface()));
             feature.generatePart(info, part, transform, 0, height, 0, LostCityTerrainFeature.HardAirSetting.AIR);
         }
