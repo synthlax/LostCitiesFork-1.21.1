@@ -305,8 +305,8 @@ public class Scattered {
     private static int handleScatteredTerrainMulti(LostCityTerrainFeature feature, ScatteredBuilding scattered, ChunkCoord coord, int minimum, int maximum, int average) {
         int lowestLevel = switch (scattered.getTerrainheight()) {
             case LOWEST -> minimum;
-            case AVERAGE -> maximum;
-            case HIGHEST -> average;
+            case AVERAGE -> average;
+            case HIGHEST -> maximum;
             case OCEAN -> ((ServerChunkCache) feature.provider.getWorld().getChunkSource()).getGenerator().getSeaLevel();
         };
         lowestLevel += scattered.getHeightoffset();

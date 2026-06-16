@@ -85,10 +85,30 @@ public class LostCitySetup {
         this.customizedProfile = other.customizedProfile;
     }
 
+    private void initProfiles() {
+        if (profiles == null) {
+            String preferedProfile = "default";
+            profiles = ProfileSetup.STANDARD_PROFILES.entrySet().stream()
+                    .filter(entry -> entry.getValue().isPublic())
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toList());
+            profiles.sort((o1, o2) -> {
+                if (preferedProfile.equals(o1)) {
+                    return -1;
+                }
+                if (preferedProfile.equals(o2)) {
+                    return 1;
+                }
+                return o1.compareTo(o2);
+            });
+        }
+    }
+
     public void customize() {
         if (profile == null) {
             throw new IllegalStateException("Cannot happen!");
         }
+        initProfiles();
         customizedProfile = new LostCityProfile("customized", false);
         LostCityProfile original = ProfileSetup.STANDARD_PROFILES.get(profile);
         ProfileSetup.STANDARD_PROFILES.put("customized", customizedProfile);
@@ -160,22 +180,7 @@ public class LostCitySetup {
     }
 
     public void toggleProfile() {
-        if (profiles == null) {
-            String preferedProfile = "default";
-            profiles = ProfileSetup.STANDARD_PROFILES.entrySet().stream()
-                    .filter(entry -> entry.getValue().isPublic())
-                    .map(Map.Entry::getKey)
-                    .collect(Collectors.toList());
-            profiles.sort((o1, o2) -> {
-                if (preferedProfile.equals(o1)) {
-                    return -1;
-                }
-                if (preferedProfile.equals(o2)) {
-                    return 1;
-                }
-                return o1.compareTo(o2);
-            });
-        }
+        initProfiles();
 
         if (profiles.isEmpty()) {
             return;

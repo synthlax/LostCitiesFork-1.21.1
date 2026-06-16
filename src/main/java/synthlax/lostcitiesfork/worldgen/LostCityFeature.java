@@ -74,12 +74,7 @@ public class LostCityFeature extends Feature<NoneFeatureConfiguration> {
     @Nullable
     public IDimensionInfo getDimensionInfo(WorldGenLevel world) {
         if (globalDimensionInfoDirtyCounter != dimensionInfoDirtyCounter) {
-            synchronized (this) {
-                if (globalDimensionInfoDirtyCounter != dimensionInfoDirtyCounter) {
-                    // Force clear of cache
-                    cleanUp();
-                }
-            }
+            cleanUp();
         }
         ResourceKey<Level> type = world.getLevel().dimension();
         String profileName = Config.getProfileForDimension(world.getLevel(), type);
@@ -96,11 +91,13 @@ public class LostCityFeature extends Feature<NoneFeatureConfiguration> {
         return null;
     }
 
-    public synchronized void cleanUp() {
+    public void cleanUp() {
+        synchronized (this) {
+            dimensionInfoDirtyCounter = globalDimensionInfoDirtyCounter;
+        }
         LostCities.lostCitiesImp.cleanUp();
         ForgeEventHandlers.cleanUp();
         AssetRegistries.reset();
         dimensionInfo.clear();
-        dimensionInfoDirtyCounter = globalDimensionInfoDirtyCounter;
     }
 }

@@ -9,6 +9,7 @@ import synthlax.lostcitiesfork.varia.CustomTeleporter;
 import synthlax.lostcitiesfork.varia.WorldTools;
 import synthlax.lostcitiesfork.worldgen.GlobalTodo;
 import synthlax.lostcitiesfork.worldgen.IDimensionInfo;
+import synthlax.lostcitiesfork.worldgen.LostCityTerrainFeature;
 import synthlax.lostcitiesfork.worldgen.lost.*;
 import synthlax.lostcitiesfork.worldgen.lost.*;
 import synthlax.lostcitiesfork.worldgen.lost.cityassets.AssetRegistries;
@@ -117,6 +118,7 @@ public class ForgeEventHandlers {
         BiomeInfo.cleanCache();
         City.cleanCache();
         CitySphere.cleanCache();
+        LostCityTerrainFeature.cleanCache();
         GlobalTodo.cleanUp();
     }
 

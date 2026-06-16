@@ -304,24 +304,33 @@ public class BuildingInfo implements ILostChunkInfo {
     }
 
     private static NoiseGeneratorPerlin buildingNoise = null;
+    private static final Object NOISE_LOCK = new Object();
 
-    private static synchronized NoiseGeneratorPerlin getBuildingNoise(IDimensionInfo provider) {
+    private static NoiseGeneratorPerlin getBuildingNoise(IDimensionInfo provider) {
         if (buildingNoise == null) {
-            buildingNoise = new NoiseGeneratorPerlin(new net.minecraft.world.level.levelgen.LegacyRandomSource(provider.getSeed() + 457813957L), 4);
+            synchronized (NOISE_LOCK) {
+                if (buildingNoise == null) {
+                    buildingNoise = new NoiseGeneratorPerlin(new net.minecraft.world.level.levelgen.LegacyRandomSource(provider.getSeed() + 457813957L), 4);
+                }
+            }
         }
         return buildingNoise;
     }
 
     private static NoiseGeneratorPerlin parkNoise = null;
 
-    private static synchronized NoiseGeneratorPerlin getParkNoise(IDimensionInfo provider) {
+    private static NoiseGeneratorPerlin getParkNoise(IDimensionInfo provider) {
         if (parkNoise == null) {
-            parkNoise = new NoiseGeneratorPerlin(new net.minecraft.world.level.levelgen.LegacyRandomSource(provider.getSeed() + 893125741L), 4);
+            synchronized (NOISE_LOCK) {
+                if (parkNoise == null) {
+                    parkNoise = new NoiseGeneratorPerlin(new net.minecraft.world.level.levelgen.LegacyRandomSource(provider.getSeed() + 893125741L), 4);
+                }
+            }
         }
         return parkNoise;
     }
 
-    public static synchronized LostChunkCharacteristics getChunkCharacteristicsGui(ChunkCoord key, IDimensionInfo provider) {
+    public static LostChunkCharacteristics getChunkCharacteristicsGui(ChunkCoord key, IDimensionInfo provider) {
 //        LostChunkCharacteristics cached = CITY_INFO_MAP.get(key);
 //        if (cached != null) {
 //            return cached;
@@ -351,7 +360,7 @@ public class BuildingInfo implements ILostChunkInfo {
         return characteristics;
     }
 
-    public static synchronized LostChunkCharacteristics getChunkCharacteristics(ChunkCoord coord, IDimensionInfo provider) {
+    public static LostChunkCharacteristics getChunkCharacteristics(ChunkCoord coord, IDimensionInfo provider) {
         LostChunkCharacteristics cached = CITY_INFO_MAP.get(coord);
         if (cached != null) {
             return cached;
@@ -469,6 +478,13 @@ public class BuildingInfo implements ILostChunkInfo {
             if (CitySphere.onCitySphereBorder(coord, provider)) {
                 return false;
             } else if (CitySphere.hasMonorailStation(coord, provider)) {
+                return false;
+            }
+        }
+
+        WorldGenLevel world = provider.getWorld();
+        if (world != null) {
+            if (LostCityTerrainFeature.hasBlacklistedStructure(world, coord.chunkX(), coord.chunkZ()) != LostCityTerrainFeature.AvoidChunk.NO) {
                 return false;
             }
         }
@@ -1170,7 +1186,7 @@ public class BuildingInfo implements ILostChunkInfo {
         return result;
     }
 
-    public static synchronized int getCityLevelGui(ChunkCoord key, IDimensionInfo provider) {
+    public static int getCityLevelGui(ChunkCoord key, IDimensionInfo provider) {
         int result;
         if ((provider.getProfile().isSpace() || provider.getProfile().isVoidSpheres())) {
             result = getCityLevelSpace(key, provider);

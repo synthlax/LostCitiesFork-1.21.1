@@ -42,4 +42,6 @@ public interface IDimensionInfo {
 
     @Nullable
     ResourceKey<Level> dimension();
+
+    default void cleanUp() {}
 }

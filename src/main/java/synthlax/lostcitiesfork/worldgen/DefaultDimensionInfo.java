@@ -134,4 +134,11 @@ public class DefaultDimensionInfo implements IDimensionInfo {
     public ResourceKey<Level> dimension() {
         return getWorld().getLevel().dimension();
     }
+
+    @Override
+    public void cleanUp() {
+        worldLocal.remove();
+        randomLocal.remove();
+        feature.cleanUp();
+    }
 }

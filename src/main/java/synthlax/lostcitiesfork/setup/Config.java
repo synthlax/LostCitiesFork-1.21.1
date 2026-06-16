@@ -72,13 +72,17 @@ public class Config {
     public static void registerLostCityDimension(ServerLevel level, ResourceKey<Level> type, String profile) {
         String profileForDimension = getProfileForDimension(level, type);
         if (profileForDimension == null) {
-            dimensionProfileCache.put(type, profile);
+            Map<ResourceKey<Level>, String> cache = dimensionProfileCache;
+            if (cache != null) {
+                cache.put(type, profile);
+            }
         }
     }
 
     public static String getProfileForDimension(ServerLevel level, ResourceKey<Level> type) {
-        if (dimensionProfileCache == null) {
-            dimensionProfileCache = new HashMap<>();
+        Map<ResourceKey<Level>, String> cache = dimensionProfileCache;
+        if (cache == null) {
+            cache = new java.util.concurrent.ConcurrentHashMap<>();
             for (String dp : DIMENSION_PROFILES.get()) {
                 String[] split = dp.split("=");
                 if (split.length != 2) {
@@ -88,7 +92,7 @@ public class Config {
                     String profileName = split[1];
                     LostCityProfile profile = ProfileSetup.STANDARD_PROFILES.get(profileName);
                     if (profile != null) {
-                        dimensionProfileCache.put(dimensionType, profileName);
+                        cache.put(dimensionType, profileName);
                     } else {
                         LostCities.getLogger().error("Cannot find profile: {} for dimension {}!", profileName, split[0]);
                     }
@@ -110,18 +114,16 @@ public class Config {
                 selectedProfile = data.getSelectedProfile();
                 selectedJson = data.getSelectedJson();
                 // If this is also empty get from config for the overworld
-                if (level.dimension() == Level.OVERWORLD) {
-                    if (selectedJson.isEmpty()) {
-                        selectedJson = Config.SELECTED_CUSTOM_JSON.get();
-                    }
-                    if (selectedProfile.isEmpty()) {
-                        selectedProfile = Config.SELECTED_PROFILE.get();
-                    }
+                if (selectedJson.isEmpty()) {
+                    selectedJson = Config.SELECTED_CUSTOM_JSON.get();
+                }
+                if (selectedProfile.isEmpty()) {
+                    selectedProfile = Config.SELECTED_PROFILE.get();
                 }
             }
 
             if (!selectedProfile.isEmpty()) {
-                dimensionProfileCache.put(Level.OVERWORLD, selectedProfile);
+                cache.put(Level.OVERWORLD, selectedProfile);
                 if (!selectedJson.isEmpty()) {
                     LostCityProfile profile = new LostCityProfile("customized", selectedJson);
                     if (!ProfileSetup.STANDARD_PROFILES.containsKey("customized")) {
@@ -131,14 +133,15 @@ public class Config {
                 }
             }
 
-            String profile = getProfileForDimension(level, Level.OVERWORLD);
+            String profile = cache.get(Level.OVERWORLD);
             if (profile != null && !profile.isEmpty()) {
                 if (ProfileSetup.STANDARD_PROFILES.get(profile).GENERATE_NETHER) {
-                    dimensionProfileCache.put(Level.NETHER, "cavern");
+                    cache.put(Level.NETHER, "cavern");
                 }
             }
+            dimensionProfileCache = cache;
         }
-        return dimensionProfileCache.get(type);
+        return cache.get(type);
     }
 
     public static boolean isAvoidedStructure(ResourceLocation id) {
@@ -188,8 +191,8 @@ public class Config {
         SELECTED_CUSTOM_JSON = SERVER_BUILDER.define("selectedCustomJson", "");
         TODO_QUEUE_SIZE = SERVER_BUILDER.comment("The size of the todo queues for the lost city generator").defineInRange("todoQueueSize", 20, 1, 100000);
         FORCE_SAPLING_GROWTH = SERVER_BUILDER.comment("If this is true then saplings will grow into trees during generation. This is more expensive").define("forceSaplingGrowth", true);
-        CACHE_CLEANUP_SECONDS = SERVER_BUILDER.comment("Time in seconds after which cached chunk data is evicted").defineInRange("cacheCleanupSeconds", 300, 1, 86400);
-        MAX_CACHE_SIZE = SERVER_BUILDER.comment("The maximum number of entries to keep in each world-generation coordinate cache (to prevent short-term memory spikes)").defineInRange("maxCacheSize", 2048, 1, 1000000);
+        CACHE_CLEANUP_SECONDS = SERVER_BUILDER.comment("Time in seconds after which cached chunk data is evicted").defineInRange("cacheCleanupSeconds", 15, 1, 86400);
+        MAX_CACHE_SIZE = SERVER_BUILDER.comment("The maximum number of entries to keep in each world-generation coordinate cache (to prevent short-term memory spikes)").defineInRange("maxCacheSize", 512, 1, 1000000);
         AVOID_STRUCTURES = SERVER_BUILDER
                 .comment("List of structures to avoid when generating cities (for example to avoid generating a city in a woodland mansion)")
                 .defineList("avoidStructures", Lists.newArrayList(DEF_AVOID_STRUCTURES), s -> s instanceof String);
@@ -198,7 +201,7 @@ public class Config {
                 .define("avoidStructuresAdjacent", false);
         AVOID_VILLAGES_ADJACENT = SERVER_BUILDER
                 .comment("If true then also avoid generating cities in chunks adjacent to the chunks with villages")
-                .define("avoidVillagesAdjacent", false);
+                .define("avoidVillagesAdjacent", true);
         AVOID_VILLAGES = SERVER_BUILDER
                 .comment("If true then avoid generating cities in chunks with villages")
                 .define("avoidVillages", true);
@@ -207,7 +210,7 @@ public class Config {
                 .define("avoidFlattening", true);
         VILLAGE_AVOIDANCE_RADIUS = SERVER_BUILDER
                 .comment("The radius (in chunks) around villages where cities should not generate (0 to disable, 1 to check the chunk itself, 2 to check adjacent chunks, etc.)")
-                .defineInRange("villageAvoidanceRadius", 1, 0, 16);
+                .defineInRange("villageAvoidanceRadius", 4, 0, 16);
         NATURAL_FLATTENING_FACTOR = SERVER_BUILDER
                 .comment("A factor (0.0 to 1.0) to control how naturally the terrain is smoothed/flattened under city chunks instead of being perfectly flat. 0.0 is completely flat, 1.0 is following the natural terrain slopes perfectly.")
                 .defineInRange("naturalFlatteningFactor", 0.0, 0.0, 1.0);

@@ -16,27 +16,16 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.function.Predicate;
 
-import static net.minecraft.world.level.chunk.LevelChunkSection.*;
-
 public class ChunkDriver {
 
-    private static final java.util.concurrent.locks.ReentrantLock[] CHUNK_LOCKS = new java.util.concurrent.locks.ReentrantLock[2048];
-    static {
-        for (int i = 0; i < 2048; i++) {
-            CHUNK_LOCKS[i] = new java.util.concurrent.locks.ReentrantLock();
-        }
-    }
-
-    private static java.util.concurrent.locks.ReentrantLock getChunkLock(int chunkX, int chunkZ) {
-        int index = Math.abs((chunkX * 31 + chunkZ) % 2048);
-        return CHUNK_LOCKS[index];
-    }
+    public static final int SECTION_WIDTH = 16;
+    public static final int SECTION_HEIGHT = 16;
+    public static final int SECTION_SIZE = 4096;
 
     private LevelAccessor region;
     private ChunkAccess primer;
     private final BlockPos.MutableBlockPos current = new BlockPos.MutableBlockPos();
     private final BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-//    private final Long2ObjectOpenHashMap<BlockState> cache = new Long2ObjectOpenHashMap<>();
     private SectionCache cache;
     private int cx;
     private int cz;
@@ -58,30 +47,22 @@ public class ChunkDriver {
     }
 
     public void actuallyGenerate(ChunkAccess chunk) {
-        int targetCx = chunk.getPos().x;
-        int targetCz = chunk.getPos().z;
-        java.util.concurrent.locks.ReentrantLock lock = getChunkLock(targetCx, targetCz);
-        lock.lock();
-        try {
-            cache.generate(chunk);
+        cache.generate(chunk);
 
-            BlockState bedrock = Blocks.BEDROCK.defaultBlockState();
-            for (int x = 0 ; x < 16 ; x++) {
-                for (int z = 0 ; z < 16 ; z++) {
-                    int y = cache.heightmap[x][z];
-                    if (y > Integer.MIN_VALUE) {
-                        chunk.getOrCreateHeightmapUnprimed(Heightmap.Types.MOTION_BLOCKING).update(x, y, z, bedrock);
-                        chunk.getOrCreateHeightmapUnprimed(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES).update(x, y, z, bedrock);
-                        chunk.getOrCreateHeightmapUnprimed(Heightmap.Types.OCEAN_FLOOR).update(x, y, z, bedrock);
-                        chunk.getOrCreateHeightmapUnprimed(Heightmap.Types.WORLD_SURFACE).update(x, y, z, bedrock);
-                    }
+        BlockState bedrock = Blocks.BEDROCK.defaultBlockState();
+        for (int x = 0 ; x < 16 ; x++) {
+            for (int z = 0 ; z < 16 ; z++) {
+                int y = cache.heightmap[x][z];
+                if (y > Integer.MIN_VALUE) {
+                    chunk.getOrCreateHeightmapUnprimed(Heightmap.Types.MOTION_BLOCKING).update(x, y, z, bedrock);
+                    chunk.getOrCreateHeightmapUnprimed(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES).update(x, y, z, bedrock);
+                    chunk.getOrCreateHeightmapUnprimed(Heightmap.Types.OCEAN_FLOOR).update(x, y, z, bedrock);
+                    chunk.getOrCreateHeightmapUnprimed(Heightmap.Types.WORLD_SURFACE).update(x, y, z, bedrock);
                 }
             }
-
-            cache.clear();
-        } finally {
-            lock.unlock();
         }
+
+        cache.clear();
     }
 
     private void setBlock(BlockPos p, BlockState state) {
@@ -90,7 +71,7 @@ public class ChunkDriver {
         }
     }
 
-    // This version of getBlock() is less optimal but it will work for different chunks
+    // This version of getBlock() is optimal and completely thread-safe
     private BlockState getBlockSafe(BlockPos p) {
         if (isThisChunk(p)) {
             return getBlock(p);
@@ -102,21 +83,7 @@ public class ChunkDriver {
                     return Blocks.AIR.defaultBlockState();
                 }
             }
-            java.util.concurrent.locks.ReentrantLock lock = getChunkLock(targetCx, targetCz);
-            try {
-                if (lock.tryLock(50, java.util.concurrent.TimeUnit.MILLISECONDS)) {
-                    try {
-                        return region.getBlockState(p);
-                    } finally {
-                        lock.unlock();
-                    }
-                } else {
-                    return region.getBlockState(p);
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return region.getBlockState(p);
-            }
+            return region.getBlockState(p);
         }
     }
 
@@ -232,9 +199,7 @@ public class ChunkDriver {
                     return adjacent;
                 }
             }
-            synchronized (getChunkLock(neighborCx, neighborCz)) {
-                newAdjacent = adjacent.updateShape(direction, state, region, pos, relativePos);
-            }
+            newAdjacent = adjacent.updateShape(direction, state, region, pos, relativePos);
         } catch (Exception e) {
             // We got an exception. For example for beehives there can potentially be a problem so in this case we just ignore it
             return adjacent;
@@ -249,17 +214,13 @@ public class ChunkDriver {
                     if (r.hasChunk(px, pz)) {
                         ChunkAccess chunk = r.getChunk(px, pz);
                         if (chunk.getPersistedStatus().isOrAfter(ChunkStatus.FULL)) {
-                            synchronized (getChunkLock(px, pz)) {
-                                r.setBlock(pos, newAdjacent, Block.UPDATE_CLIENTS);
-                            }
+                            r.setBlock(pos, newAdjacent, Block.UPDATE_CLIENTS);
                         }
                     }
                 } else {
                     ChunkAccess chunk = region.getChunk(pos);
                     if (chunk.getPersistedStatus().isOrAfter(ChunkStatus.FULL)) {
-                        synchronized (getChunkLock(px, pz)) {
-                            region.setBlock(pos, newAdjacent, Block.UPDATE_CLIENTS);
-                        }
+                        region.setBlock(pos, newAdjacent, Block.UPDATE_CLIENTS);
                     }
                 }
             }
@@ -351,23 +312,12 @@ public class ChunkDriver {
         return state;
     }
 
-//    private void validate() {
-//        if (current.getX() < 0 || current.getY() < 0 || current.getZ() < 0) {
-//            throw new RuntimeException("current: " + current.getX() + "," + current.getY() + "," + current.getZ());
-//        }
-//        if (current.getX() > 15 || current.getY() > 255 || current.getZ() > 15) {
-//            throw new RuntimeException("current: " + current.getX() + "," + current.getY() + "," + current.getZ());
-//        }
-//    }
-
     public ChunkDriver block(BlockState c) {
-//        validate();
         setBlock(current, correct(c));
         return this;
     }
 
     public ChunkDriver add(BlockState state) {
-//        validate();
         setBlock(current, correct(state));
         incY();
         return this;
@@ -396,7 +346,6 @@ public class ChunkDriver {
     public BlockState getBlockNorth() {
         return getBlockSafe(pos.set(current.getX(), current.getY(), current.getZ()-1));
     }
-
 
     public BlockState getBlock(int x, int y, int z) {
         return getBlockSafe(pos.set(x + (primer.getPos().x << 4), y, z + (primer.getPos().z << 4)));
@@ -493,20 +442,31 @@ public class ChunkDriver {
             int pz = z & 0xf;
             boolean isAir = state.isAir();
             boolean dirty = false;
-            while (y1 <= y2) {
-                int sectionIdx = (y1 - minY) / SECTION_HEIGHT;
-                if (sectionIdx >= 0 && sectionIdx < cache.length) {
-                    int idx = (px << 8) + ((y1 & 0xf) << 4) + pz;
 
-                    if (cache[sectionIdx].get(idx) != state) {
-                        dirty = true;
-                        cache[sectionIdx].set(idx, state);
-                        if (!isAir) {
-                            cache[sectionIdx].isEmpty = false;
+            int y = y1;
+            while (y <= y2) {
+                int sectionIdx = (y - minY) >> 4;
+                if (sectionIdx >= 0 && sectionIdx < cache.length) {
+                    S sec = cache[sectionIdx];
+                    int secStartY = (sectionIdx << 4) + minY;
+                    int secEndY = secStartY + 15;
+                    int endY = Math.min(y2, secEndY);
+                    int xPart = px << 8;
+
+                    for (int curY = y; curY <= endY; curY++) {
+                        int idx = xPart + ((curY & 0xf) << 4) + pz;
+                        if (sec.get(idx) != state) {
+                            dirty = true;
+                            sec.set(idx, state);
+                            if (!isAir) {
+                                sec.isEmpty = false;
+                            }
                         }
                     }
+                    y = endY + 1;
+                } else {
+                    y++;
                 }
-                y1++;
             }
 
             // Now update the heightmap
@@ -532,21 +492,32 @@ public class ChunkDriver {
             int pz = z & 0xf;
             boolean isAir = state.isAir();
             boolean dirty = false;
-            while (y1 <= y2) {
-                int sectionIdx = (y1 - minY) / SECTION_HEIGHT;
-                if (sectionIdx >= 0 && sectionIdx < cache.length) {
-                    int idx = (px << 8) + ((y1 & 0xf) << 4) + pz;
 
-                    BlockState st = cache[sectionIdx].get(idx);
-                    if (st != state && st != null && test.test(st)) {
-                        dirty = true;
-                        cache[sectionIdx].set(idx, state);
-                        if (!isAir) {
-                            cache[sectionIdx].isEmpty = false;
+            int y = y1;
+            while (y <= y2) {
+                int sectionIdx = (y - minY) >> 4;
+                if (sectionIdx >= 0 && sectionIdx < cache.length) {
+                    S sec = cache[sectionIdx];
+                    int secStartY = (sectionIdx << 4) + minY;
+                    int secEndY = secStartY + 15;
+                    int endY = Math.min(y2, secEndY);
+                    int xPart = px << 8;
+
+                    for (int curY = y; curY <= endY; curY++) {
+                        int idx = xPart + ((curY & 0xf) << 4) + pz;
+                        BlockState st = sec.get(idx);
+                        if (st != state && st != null && test.test(st)) {
+                            dirty = true;
+                            sec.set(idx, state);
+                            if (!isAir) {
+                                sec.isEmpty = false;
+                            }
                         }
                     }
+                    y = endY + 1;
+                } else {
+                    y++;
                 }
-                y1++;
             }
 
             // Now update the heightmap

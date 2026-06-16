@@ -102,6 +102,22 @@ public class LostCityTerrainFeature {
         return randLocal.get();
     }
 
+    private static final TimedCache<ChunkCoord, AvoidChunk> AVOID_STRUCTURE_CACHE = new TimedCache<ChunkCoord, AvoidChunk>("AVOID_STRUCTURE_CACHE", Config.CACHE_CLEANUP_SECONDS::get);
+
+    public static void cleanCache() {
+        AVOID_STRUCTURE_CACHE.clear();
+    }
+
+    public void cleanUp() {
+        rubbleBuffer.remove();
+        leavesBuffer.remove();
+        ruinBuffer.remove();
+        bottomLayerBuffer.remove();
+        chunkDriverThreadLocal.remove();
+        randLocal.remove();
+        cachedHeightmaps.clear();
+    }
+
     public final IDimensionInfo provider;
     public final LostCityProfile profile;
     public final RandomSource rand;
@@ -396,7 +412,7 @@ public class LostCityTerrainFeature {
         ADJACENT
     }
 
-    private static AvoidChunk hasBlacklistedStructure(WorldGenLevel level, int chunkX, int chunkZ) {
+    public static AvoidChunk hasBlacklistedStructure(WorldGenLevel level, int chunkX, int chunkZ) {
         int villageRadius = Config.AVOID_VILLAGES.get() ? Config.VILLAGE_AVOIDANCE_RADIUS.get() : 0;
         if (Config.AVOID_VILLAGES_ADJACENT.get() && villageRadius < 2) {
             villageRadius = 2; // Check adjacent
@@ -410,24 +426,28 @@ public class LostCityTerrainFeature {
                 for (int dz = -maxRadius + 1; dz < maxRadius; dz++) {
                     int dist = Math.max(Math.abs(dx), Math.abs(dz));
                     if (level.hasChunk(chunkX + dx, chunkZ + dz)) {
-                        ChunkAccess ch = level.getChunk(chunkX + dx, chunkZ + dz, ChunkStatus.STRUCTURE_REFERENCES);
-                        if (ch.hasAnyStructureReferences()) {
-                            var structures = level.registryAccess().registryOrThrow(Registries.STRUCTURE);
-                            var references = ch.getAllReferences();
-                            for (var entry : references.entrySet()) {
-                                if (!entry.getValue().isEmpty()) {
-                                    Optional<ResourceKey<Structure>> key = structures.getResourceKey(entry.getKey());
-                                    if (key.isPresent()) {
-                                        boolean isVillage = key.map(k -> structures.getHolderOrThrow(k).is(StructureTags.VILLAGE)).orElse(false);
-                                        if (isVillage && dist < villageRadius) {
-                                            return (dx == 0 && dz == 0) ? AvoidChunk.YES : AvoidChunk.ADJACENT;
-                                        }
-                                        if (!isVillage && Config.isAvoidedStructure(key.get().location()) && dist < structRadius) {
-                                            return (dx == 0 && dz == 0) ? AvoidChunk.YES : AvoidChunk.ADJACENT;
+                        try {
+                            ChunkAccess ch = level.getChunk(chunkX + dx, chunkZ + dz, ChunkStatus.STRUCTURE_REFERENCES, false);
+                            if (ch != null && ch.hasAnyStructureReferences()) {
+                                var structures = level.registryAccess().registryOrThrow(Registries.STRUCTURE);
+                                var references = ch.getAllReferences();
+                                for (var entry : references.entrySet()) {
+                                    if (!entry.getValue().isEmpty()) {
+                                        Optional<ResourceKey<Structure>> key = structures.getResourceKey(entry.getKey());
+                                        if (key.isPresent()) {
+                                            boolean isVillage = key.map(k -> structures.getHolderOrThrow(k).is(StructureTags.VILLAGE)).orElse(false);
+                                            if (isVillage && dist < villageRadius) {
+                                                return (dx == 0 && dz == 0) ? AvoidChunk.YES : AvoidChunk.ADJACENT;
+                                            }
+                                            if (!isVillage && Config.isAvoidedStructure(key.get().location()) && dist < structRadius) {
+                                                return (dx == 0 && dz == 0) ? AvoidChunk.YES : AvoidChunk.ADJACENT;
+                                            }
                                         }
                                     }
                                 }
                             }
+                        } catch (Throwable t) {
+                            couldBeUnknown = true;
                         }
                     } else {
                         couldBeUnknown = true;

@@ -7,15 +7,29 @@ import synthlax.lostcitiesfork.worldgen.lost.regassets.data.WorldSettings;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 
-public class ChunkFixer {
+import javax.annotation.Nullable;
 
+public class ChunkFixer {
 
     private static void executePostTodo(ChunkCoord coord, IDimensionInfo provider) {
         BuildingInfo info = BuildingInfo.getBuildingInfo(coord, provider);
         info.getPostTodo().forEach((pos, runnable) -> runnable.run());
         info.clearPostTodo();
+    }
+
+    @Nullable
+    private static ChunkAccess getSafeChunk(LevelAccessor world, int x, int z) {
+        if (world.hasChunk(x, z)) {
+            try {
+                return world.getChunk(x, z, ChunkStatus.FEATURES, false);
+            } catch (Throwable t) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private static void generateVines(ChunkCoord coord, LevelAccessor world, IDimensionInfo provider) {
@@ -34,7 +48,8 @@ public class ChunkFixer {
         WorldStyle worldStyle = provider.getWorldStyle();
         WorldSettings worldSettings = worldStyle.getWorldSettings();
         if (info.hasBuilding) {
-            if (world.getChunk(coord.chunkX() + 1, coord.chunkZ()).getPersistedStatus().isOrAfter(ChunkStatus.FEATURES)) {
+            ChunkAccess neighbor = getSafeChunk(world, coord.chunkX() + 1, coord.chunkZ());
+            if (neighbor != null && neighbor.getPersistedStatus().isOrAfter(ChunkStatus.FEATURES)) {
                 BuildingInfo adjacent = info.getXmax();
                 int bottom = Math.max(adjacent.getCityGroundLevel() + 3, adjacent.hasBuilding ? adjacent.getMaxHeight() : (adjacent.getCityGroundLevel() + 3));
                 BlockState state = worldSettings.vineWest();
@@ -48,7 +63,8 @@ public class ChunkFixer {
             }
         }
         if (info.getXmax().hasBuilding) {
-            if (world.getChunk(chunkX + 1, chunkZ).getPersistedStatus().isOrAfter(ChunkStatus.FEATURES)) {
+            ChunkAccess neighbor = getSafeChunk(world, chunkX + 1, chunkZ);
+            if (neighbor != null && neighbor.getPersistedStatus().isOrAfter(ChunkStatus.FEATURES)) {
                 BuildingInfo adjacent = info.getXmax();
                 int bottom = Math.max(info.getCityGroundLevel() + 3, info.hasBuilding ? maxHeight : (info.getCityGroundLevel() + 3));
                 BlockState state = worldSettings.vineEast();
@@ -63,7 +79,8 @@ public class ChunkFixer {
         }
 
         if (info.hasBuilding) {
-            if (world.getChunk(chunkX, chunkZ + 1).getPersistedStatus().isOrAfter(ChunkStatus.FEATURES)) {
+            ChunkAccess neighbor = getSafeChunk(world, chunkX, chunkZ + 1);
+            if (neighbor != null && neighbor.getPersistedStatus().isOrAfter(ChunkStatus.FEATURES)) {
                 BuildingInfo adjacent = info.getZmax();
                 int bottom = Math.max(adjacent.getCityGroundLevel() + 3, adjacent.hasBuilding ? adjacent.getMaxHeight() : (adjacent.getCityGroundLevel() + 3));
                 BlockState state = worldSettings.vineNorth();
@@ -77,7 +94,8 @@ public class ChunkFixer {
             }
         }
         if (info.getZmax().hasBuilding) {
-            if (world.getChunk(chunkX, chunkZ + 1).getPersistedStatus().isOrAfter(ChunkStatus.FEATURES)) {
+            ChunkAccess neighbor = getSafeChunk(world, chunkX, chunkZ + 1);
+            if (neighbor != null && neighbor.getPersistedStatus().isOrAfter(ChunkStatus.FEATURES)) {
                 BuildingInfo adjacent = info.getZmax();
                 int bottom = Math.max(info.getCityGroundLevel() + 3, info.hasBuilding ? maxHeight : (info.getCityGroundLevel() + 3));
                 BlockState state = worldSettings.vineSouth();
@@ -109,7 +127,6 @@ public class ChunkFixer {
             pos = pos.below();
         }
     }
-
 
     public static void fix(IDimensionInfo info, ChunkCoord coord) {
         generateVines(coord, info.getWorld(), info);
